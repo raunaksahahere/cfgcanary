@@ -1,0 +1,2314 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "cfgcanary/v1/cfgcanary.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "ConfigService"
+    },
+    {
+      "name": "ControlService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/audit": {
+      "get": {
+        "operationId": "ControlService_ListAudit",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListAuditResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "config",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "releaseId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "description": "Opaque; results are newest first.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/configs": {
+      "get": {
+        "operationId": "ControlService_ListConfigs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListConfigsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      },
+      "post": {
+        "operationId": "ControlService_RegisterConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Config"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RegisterConfigRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/configs/{name}": {
+      "get": {
+        "operationId": "ControlService_GetConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Config"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/configs/{name}/diff": {
+      "get": {
+        "operationId": "ControlService_DiffVersions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DiffVersionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "from",
+            "description": "0 means \"the empty document\".",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/configs/{name}/versions": {
+      "get": {
+        "operationId": "ControlService_ListVersions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListVersionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      },
+      "post": {
+        "summary": "SubmitVersion validates a payload and, unless dry_run is set, stores it as a\nnew immutable version.",
+        "operationId": "ControlService_SubmitVersion",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubmitVersionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlServiceSubmitVersionBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/configs/{name}/versions/{version}": {
+      "get": {
+        "operationId": "ControlService_GetVersion",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConfigVersion"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/configs/{name}/versions/{version}/payload": {
+      "get": {
+        "operationId": "ControlService_GetVersionPayload",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1VersionPayload"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/info": {
+      "get": {
+        "operationId": "ControlService_GetServerInfo",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ServerInfo"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/instances": {
+      "get": {
+        "operationId": "ControlService_ListInstances",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListInstancesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "environment",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/releases": {
+      "get": {
+        "operationId": "ControlService_ListReleases",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListReleasesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "config",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activeOnly",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      },
+      "post": {
+        "summary": "CreateRelease starts a rollout. With dry_run it returns the plan and writes\nnothing.",
+        "operationId": "ControlService_CreateRelease",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateReleaseResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateReleaseRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/releases/{id}": {
+      "get": {
+        "operationId": "ControlService_GetRelease",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Release"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/releases/{id}:pause": {
+      "post": {
+        "operationId": "ControlService_PauseRelease",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Release"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlServicePauseReleaseBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/releases/{id}:promote": {
+      "post": {
+        "operationId": "ControlService_PromoteRelease",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Release"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlServicePromoteReleaseBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/releases/{id}:resume": {
+      "post": {
+        "operationId": "ControlService_ResumeRelease",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Release"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlServiceResumeReleaseBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/releases/{id}:rollback": {
+      "post": {
+        "operationId": "ControlService_RollbackRelease",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Release"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlServiceRollbackReleaseBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/targets/{config}/{environment}": {
+      "get": {
+        "operationId": "ControlService_GetTarget",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Target"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "config",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "environment",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/targets/{config}/{environment}/rings": {
+      "get": {
+        "summary": "GetRingProjection returns, per ring, the desired version and its signed\nenvelope. Used by sinks such as the Kubernetes controller.",
+        "operationId": "ControlService_GetRingProjection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RingProjection"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "config",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "environment",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/targets/{config}/{environment}:kill": {
+      "post": {
+        "summary": "KillSwitch immediately returns every ring of a target to its previous\nknown-good version and freezes the target. Break-glass, audited.",
+        "operationId": "ControlService_KillSwitch",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1KillSwitchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "config",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "environment",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlServiceKillSwitchBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    },
+    "/v1/targets/{config}/{environment}:unfreeze": {
+      "post": {
+        "operationId": "ControlService_UnfreezeTarget",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Target"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "config",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "environment",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlServiceUnfreezeTargetBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "ControlServiceKillSwitchBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string"
+        }
+      }
+    },
+    "ControlServicePauseReleaseBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string"
+        }
+      }
+    },
+    "ControlServicePromoteReleaseBody": {
+      "type": "object",
+      "properties": {
+        "expectedRing": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Ring the caller believes is active. -1 or unset+has_expected=false skips\nthe check."
+        },
+        "hasExpectedRing": {
+          "type": "boolean"
+        },
+        "override": {
+          "type": "boolean",
+          "description": "Skip gate and bake requirements. Requires the break-glass role and a\nreason; audited as an override."
+        },
+        "reason": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string"
+        }
+      }
+    },
+    "ControlServiceResumeReleaseBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string"
+        }
+      }
+    },
+    "ControlServiceRollbackReleaseBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string"
+        }
+      }
+    },
+    "ControlServiceSubmitVersionBody": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "type": "string",
+          "format": "byte"
+        },
+        "description": {
+          "type": "string"
+        },
+        "environments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Environments this version may be delivered to. Empty means every\nenvironment of the config at submission time."
+        },
+        "dryRun": {
+          "type": "boolean",
+          "description": "Validate only; store nothing."
+        },
+        "requestId": {
+          "type": "string"
+        }
+      }
+    },
+    "ControlServiceUnfreezeTargetBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1ApplyState": {
+      "type": "string",
+      "enum": [
+        "APPLY_STATE_UNSPECIFIED",
+        "APPLY_STATE_APPLIED",
+        "APPLY_STATE_ACCEPTED",
+        "APPLY_STATE_REJECTED",
+        "APPLY_STATE_FAILED",
+        "APPLY_STATE_CRASH_LOOP"
+      ],
+      "default": "APPLY_STATE_UNSPECIFIED",
+      "description": " - APPLY_STATE_APPLIED: Verified and durably stored by the agent; not yet accepted by the SDK.\n - APPLY_STATE_ACCEPTED: The application's parser accepted it and it is being served.\n - APPLY_STATE_REJECTED: The application's parser rejected it; last-known-good is being served.\n - APPLY_STATE_FAILED: The agent could not verify or store it; nothing changed locally.\n - APPLY_STATE_CRASH_LOOP: The application crash-looped on it; it was quarantined."
+    },
+    "v1AuditEvent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64"
+        },
+        "time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "actor": {
+          "type": "string",
+          "description": "Authenticated identity, or \"controller\"."
+        },
+        "action": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string",
+          "description": "allowed, denied."
+        },
+        "config": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "releaseId": {
+          "type": "string"
+        },
+        "generation": {
+          "type": "string",
+          "format": "int64"
+        },
+        "epoch": {
+          "type": "string",
+          "format": "int64"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string",
+          "description": "JSON object with action-specific detail. Never payload content."
+        }
+      }
+    },
+    "v1CohortCounts": {
+      "type": "object",
+      "properties": {
+        "eligible": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Members assigned to the cohort."
+        },
+        "reachable": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Of those, seen within the reachable window."
+        },
+        "applied": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Reported APPLIED or better for the current generation and version."
+        },
+        "accepted": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Reported ACCEPTED for the current generation and version."
+        },
+        "rejected": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "failed": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "crashLoop": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1Config": {
+      "type": "object",
+      "properties": {
+        "spec": {
+          "$ref": "#/definitions/v1ConfigSpec"
+        },
+        "specRevision": {
+          "type": "string",
+          "format": "int64"
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "latestVersion": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ConfigSpec": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string",
+          "description": "\"json\" in v1."
+        },
+        "validation": {
+          "$ref": "#/definitions/v1ValidationPolicy"
+        },
+        "failureMode": {
+          "$ref": "#/definitions/v1FailureMode"
+        },
+        "maxStaleness": {
+          "type": "string"
+        },
+        "environments": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/v1RolloutPolicy"
+          },
+          "description": "Rollout policy per environment. A config can only be released to\nenvironments listed here."
+        },
+        "retainVersions": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Committed versions kept per config beyond those still referenced."
+        }
+      }
+    },
+    "v1ConfigVersion": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string",
+          "format": "int64"
+        },
+        "description": {
+          "type": "string"
+        },
+        "environments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "artifact": {
+          "$ref": "#/definitions/v1SignedStatement"
+        },
+        "purged": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1CreateReleaseRequest": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "dryRun": {
+          "type": "boolean"
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateReleaseResponse": {
+      "type": "object",
+      "properties": {
+        "plan": {
+          "$ref": "#/definitions/v1ReleasePlan"
+        },
+        "release": {
+          "$ref": "#/definitions/v1Release",
+          "description": "Unset for dry runs."
+        }
+      }
+    },
+    "v1DiffEntry": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "type": "string",
+          "description": "added, removed, changed."
+        },
+        "path": {
+          "type": "string",
+          "description": "JSON pointer."
+        },
+        "before": {
+          "type": "string",
+          "description": "Compact JSON; truncated for large values."
+        },
+        "after": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DiffVersionsResponse": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string",
+          "format": "int64"
+        },
+        "to": {
+          "type": "string",
+          "format": "int64"
+        },
+        "fromSize": {
+          "type": "string",
+          "format": "int64"
+        },
+        "toSize": {
+          "type": "string",
+          "format": "int64"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DiffEntry"
+          }
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "totalChanges": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1FailureMode": {
+      "type": "string",
+      "enum": [
+        "FAILURE_MODE_UNSPECIFIED",
+        "FAILURE_MODE_FAIL_STATIC",
+        "FAILURE_MODE_FAIL_CLOSED"
+      ],
+      "default": "FAILURE_MODE_UNSPECIFIED",
+      "description": " - FAILURE_MODE_FAIL_STATIC: Keep serving last-known-good when the source is unreachable or stale.\n - FAILURE_MODE_FAIL_CLOSED: Mark the snapshot unusable once it is older than max_staleness."
+    },
+    "v1FinalStage": {
+      "type": "string",
+      "enum": [
+        "FINAL_STAGE_UNSPECIFIED",
+        "FINAL_STAGE_HOLDOUT",
+        "FINAL_STAGE_HARD_THRESHOLDS_ONLY"
+      ],
+      "default": "FINAL_STAGE_UNSPECIFIED",
+      "description": " - FINAL_STAGE_HOLDOUT: The last ring ends below 100%; the remainder is a holdout that stays on\nthe baseline as control and converts when the release completes.\n - FINAL_STAGE_HARD_THRESHOLDS_ONLY: The last ring is 100%: no concurrent control exists, so only hard\nthresholds and SDK evidence apply to it."
+    },
+    "v1GateMetric": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/v1MetricKind"
+        },
+        "metric": {
+          "type": "string",
+          "description": "Counter of all events (RATIO), histogram base name (HISTOGRAM_OVER) or\nevent counter (INSTANCE_EVENT)."
+        },
+        "badMetric": {
+          "type": "string",
+          "description": "Counter of bad events (RATIO)."
+        },
+        "le": {
+          "type": "string",
+          "description": "Bucket boundary, exactly as exported in the \"le\" label (HISTOGRAM_OVER)."
+        },
+        "matchers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Extra label matchers, e.g. {\"route\": \"/api\"}."
+        },
+        "margin": {
+          "type": "number",
+          "format": "double",
+          "description": "Tolerated absolute degradation of the proportion (non-inferiority margin)."
+        },
+        "hardMax": {
+          "type": "number",
+          "format": "double",
+          "description": "Roll back when the canary proportion is at or above this, regardless of\ncontrol. 0 disables."
+        },
+        "minEvents": {
+          "type": "string",
+          "format": "int64",
+          "description": "Minimum total events per cohort before the metric can be evaluated."
+        }
+      }
+    },
+    "v1GateMode": {
+      "type": "string",
+      "enum": [
+        "GATE_MODE_UNSPECIFIED",
+        "GATE_MODE_PROMETHEUS",
+        "GATE_MODE_NONE"
+      ],
+      "default": "GATE_MODE_UNSPECIFIED",
+      "description": " - GATE_MODE_PROMETHEUS: Prometheus-backed canary/control comparison.\n - GATE_MODE_NONE: No metric gate: convergence, bake time and SDK evidence only. Promotion\nthen requires an operator."
+    },
+    "v1GatePolicy": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "$ref": "#/definitions/v1GateMode"
+        },
+        "minBake": {
+          "type": "string",
+          "description": "Minimum time a ring stays exposed before the first look."
+        },
+        "lookInterval": {
+          "type": "string"
+        },
+        "looks": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of predeclared looks. Error probability is split across them."
+        },
+        "alphaHarm": {
+          "type": "number",
+          "format": "double"
+        },
+        "alphaNoninferiority": {
+          "type": "number",
+          "format": "double"
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1GateMetric"
+          }
+        },
+        "minInstances": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Minimum instances reporting per cohort."
+        },
+        "maxSampleAge": {
+          "type": "string"
+        },
+        "evalTimeout": {
+          "type": "string"
+        },
+        "onFail": {
+          "$ref": "#/definitions/v1OnFail"
+        },
+        "maxControlProportion": {
+          "type": "number",
+          "format": "double",
+          "description": "The comparison is INCONCLUSIVE when the control cohort's own proportion\nfor any metric is above this. 0 disables."
+        }
+      }
+    },
+    "v1GateVerdict": {
+      "type": "string",
+      "enum": [
+        "GATE_VERDICT_UNSPECIFIED",
+        "GATE_VERDICT_PASS",
+        "GATE_VERDICT_FAIL",
+        "GATE_VERDICT_INCONCLUSIVE"
+      ],
+      "default": "GATE_VERDICT_UNSPECIFIED"
+    },
+    "v1Instance": {
+      "type": "object",
+      "properties": {
+        "instanceId": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "connected": {
+          "type": "boolean"
+        },
+        "lastSeen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "agentVersion": {
+          "type": "string"
+        },
+        "statuses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1InstanceConfigStatus"
+          }
+        }
+      }
+    },
+    "v1InstanceConfigStatus": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "type": "string"
+        },
+        "generation": {
+          "type": "string",
+          "format": "int64"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "state": {
+          "$ref": "#/definitions/v1ApplyState"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Short machine-readable reason, never payload content."
+        },
+        "servingVersion": {
+          "type": "string",
+          "format": "int64",
+          "description": "What the application is actually serving."
+        },
+        "servingGeneration": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1KillSwitchResponse": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "$ref": "#/definitions/v1Target"
+        },
+        "release": {
+          "$ref": "#/definitions/v1Release"
+        }
+      }
+    },
+    "v1Limits": {
+      "type": "object",
+      "properties": {
+        "maxBytes": {
+          "type": "string",
+          "format": "int64",
+          "description": "Maximum payload size in bytes. Required, at most the server limit."
+        },
+        "maxDepth": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Maximum JSON nesting depth. 0 means the server default (64)."
+        },
+        "maxItems": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "format": "int64"
+          },
+          "description": "Cardinality limits: a JSON pointer to an array or object and its maximum\nnumber of elements, e.g. {\"/features\": 200}."
+        }
+      }
+    },
+    "v1ListAuditResponse": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AuditEvent"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListConfigsResponse": {
+      "type": "object",
+      "properties": {
+        "configs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Config"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListInstancesResponse": {
+      "type": "object",
+      "properties": {
+        "instances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Instance"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListReleasesResponse": {
+      "type": "object",
+      "properties": {
+        "releases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Release"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListVersionsResponse": {
+      "type": "object",
+      "properties": {
+        "versions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ConfigVersion"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1MetricKind": {
+      "type": "string",
+      "enum": [
+        "METRIC_KIND_UNSPECIFIED",
+        "METRIC_KIND_RATIO",
+        "METRIC_KIND_HISTOGRAM_OVER",
+        "METRIC_KIND_INSTANCE_EVENT"
+      ],
+      "default": "METRIC_KIND_UNSPECIFIED",
+      "description": " - METRIC_KIND_RATIO: bad_metric / total_metric, both counters.\n - METRIC_KIND_HISTOGRAM_OVER: Fraction of observations above a bucket boundary of a histogram.\n - METRIC_KIND_INSTANCE_EVENT: Fraction of instances whose counter increased (e.g. restarts)."
+    },
+    "v1OnFail": {
+      "type": "string",
+      "enum": [
+        "ON_FAIL_UNSPECIFIED",
+        "ON_FAIL_ROLLBACK",
+        "ON_FAIL_HALT"
+      ],
+      "default": "ON_FAIL_UNSPECIFIED"
+    },
+    "v1PlanRing": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "name": {
+          "type": "string"
+        },
+        "cumulativeBps": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "members": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current members hashed or pinned into exactly this ring."
+        },
+        "reachable": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "sample": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1Promotion": {
+      "type": "string",
+      "enum": [
+        "PROMOTION_UNSPECIFIED",
+        "PROMOTION_AUTO",
+        "PROMOTION_MANUAL"
+      ],
+      "default": "PROMOTION_UNSPECIFIED"
+    },
+    "v1RegisterConfigRequest": {
+      "type": "object",
+      "properties": {
+        "spec": {
+          "$ref": "#/definitions/v1ConfigSpec"
+        },
+        "expectedRevision": {
+          "type": "string",
+          "format": "int64",
+          "description": "When set, update only if the stored revision matches."
+        },
+        "requestId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RelativeGuards": {
+      "type": "object",
+      "properties": {
+        "maxSizeRatio": {
+          "type": "number",
+          "format": "double",
+          "description": "Reject when size \u003e max_size_ratio * previous size. 0 disables."
+        },
+        "minSizeRatio": {
+          "type": "number",
+          "format": "double",
+          "description": "Reject when size \u003c min_size_ratio * previous size. 0 disables."
+        },
+        "maxItemsRatio": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          },
+          "description": "Per JSON pointer: reject when the item count grows by more than this\nfactor relative to the base version."
+        },
+        "minItemsRatio": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          },
+          "description": "Per JSON pointer: reject when the item count shrinks below this fraction."
+        }
+      }
+    },
+    "v1Release": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "config": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "baselineVersion": {
+          "type": "string",
+          "format": "int64"
+        },
+        "state": {
+          "$ref": "#/definitions/v1ReleaseState"
+        },
+        "paused": {
+          "type": "boolean"
+        },
+        "activeRing": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Index of the highest ring exposed to the candidate; -1 before start."
+        },
+        "rings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RingStatus"
+          }
+        },
+        "reason": {
+          "type": "string",
+          "description": "Machine-readable reason for the current state, e.g. gate_fail."
+        },
+        "message": {
+          "type": "string"
+        },
+        "generation": {
+          "type": "string",
+          "format": "int64"
+        },
+        "epoch": {
+          "type": "string",
+          "format": "int64"
+        },
+        "stateVersion": {
+          "type": "string",
+          "format": "int64"
+        },
+        "policy": {
+          "$ref": "#/definitions/v1RolloutPolicy"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finished": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rollback": {
+          "$ref": "#/definitions/v1RollbackStatus"
+        },
+        "holdout": {
+          "$ref": "#/definitions/v1CohortCounts",
+          "description": "Members not in any ring until completion (holdout)."
+        },
+        "kind": {
+          "type": "string",
+          "description": "emergency when created by a kill switch with no active release."
+        }
+      }
+    },
+    "v1ReleasePlan": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "baselineVersion": {
+          "type": "string",
+          "format": "int64"
+        },
+        "rings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PlanRing"
+          }
+        },
+        "holdoutMembers": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalMembers": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "policy": {
+          "$ref": "#/definitions/v1RolloutPolicy"
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Problems that would make CreateRelease fail."
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "diff": {
+          "$ref": "#/definitions/v1DiffVersionsResponse"
+        }
+      }
+    },
+    "v1ReleaseState": {
+      "type": "string",
+      "enum": [
+        "RELEASE_STATE_UNSPECIFIED",
+        "RELEASE_STATE_PENDING",
+        "RELEASE_STATE_ROLLING",
+        "RELEASE_STATE_BAKING",
+        "RELEASE_STATE_HALTED",
+        "RELEASE_STATE_ROLLING_BACK",
+        "RELEASE_STATE_ROLLED_BACK",
+        "RELEASE_STATE_COMPLETE"
+      ],
+      "default": "RELEASE_STATE_UNSPECIFIED"
+    },
+    "v1Ring": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "cumulativeBps": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Cumulative share of the hash space, in basis points (1..10000)."
+        }
+      }
+    },
+    "v1RingDesired": {
+      "type": "object",
+      "properties": {
+        "ring": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "0 when the ring has nothing to run yet."
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string",
+          "format": "int64"
+        },
+        "artifact": {
+          "$ref": "#/definitions/v1SignedStatement"
+        },
+        "delivery": {
+          "$ref": "#/definitions/v1SignedStatement"
+        }
+      }
+    },
+    "v1RingProjection": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "$ref": "#/definitions/v1Target"
+        },
+        "rings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RingDesired"
+          }
+        }
+      }
+    },
+    "v1RingStatus": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "name": {
+          "type": "string"
+        },
+        "cumulativeBps": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "phase": {
+          "type": "string",
+          "description": "pending, rolling, baking, passed, rolled_back."
+        },
+        "counts": {
+          "$ref": "#/definitions/v1CohortCounts",
+          "description": "Counts for members of exactly this ring."
+        },
+        "generation": {
+          "type": "string",
+          "format": "int64"
+        },
+        "started": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "bakeStarted": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "looksDone": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "gateVerdict": {
+          "$ref": "#/definitions/v1GateVerdict"
+        },
+        "gateReason": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RollbackStatus": {
+      "type": "object",
+      "properties": {
+        "fallbackVersion": {
+          "type": "string",
+          "format": "int64",
+          "description": "Version every ring was returned to."
+        },
+        "generation": {
+          "type": "string",
+          "format": "int64"
+        },
+        "exposed": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Members that had been sent the candidate."
+        },
+        "confirmed": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Of those, confirmed serving the fallback at the rollback generation."
+        },
+        "pending": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Reachable but not yet confirmed."
+        },
+        "unreachable": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Not seen within the reachable window; they reconcile on reconnect."
+        },
+        "unreachableSample": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "converged": {
+          "type": "boolean"
+        },
+        "started": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "convergedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1RolloutPolicy": {
+      "type": "object",
+      "properties": {
+        "rings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Ring"
+          }
+        },
+        "salt": {
+          "type": "string",
+          "description": "Hash salt. Defaults to \"\u003cconfig\u003e/\u003cenvironment\u003e\". Frozen per release."
+        },
+        "pinnedGroups": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": "Authenticated group -\u003e ring index. Overrides hashing for that group."
+        },
+        "minInstances": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Minimum members in the first ring and in its control cohort."
+        },
+        "acceptanceThreshold": {
+          "type": "number",
+          "format": "double",
+          "description": "Fraction of reachable ring members that must have ACCEPTED."
+        },
+        "minReachableFraction": {
+          "type": "number",
+          "format": "double",
+          "description": "Fraction of ring members that must be reachable to evaluate at all."
+        },
+        "rolloutTimeout": {
+          "type": "string"
+        },
+        "rollbackTimeout": {
+          "type": "string"
+        },
+        "promotion": {
+          "$ref": "#/definitions/v1Promotion"
+        },
+        "gate": {
+          "$ref": "#/definitions/v1GatePolicy"
+        },
+        "maxSdkRejections": {
+          "type": "integer",
+          "format": "int32",
+          "description": "SDK rejections / crash loops tolerated in exposed rings before rollback."
+        },
+        "maxCrashLoops": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "finalStage": {
+          "$ref": "#/definitions/v1FinalStage"
+        },
+        "reachableWindow": {
+          "type": "string",
+          "description": "An instance counts as reachable if seen within this window."
+        }
+      }
+    },
+    "v1ServerInfo": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
+        },
+        "buildDate": {
+          "type": "string"
+        },
+        "goVersion": {
+          "type": "string"
+        },
+        "identity": {
+          "type": "string",
+          "description": "Identity and roles of the caller, as the server sees them."
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "leader": {
+          "type": "boolean"
+        },
+        "epoch": {
+          "type": "string",
+          "format": "int64"
+        },
+        "streams": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1SignedStatement": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "type": "string",
+          "format": "byte"
+        },
+        "signature": {
+          "type": "string",
+          "format": "byte"
+        },
+        "keyId": {
+          "type": "string"
+        }
+      },
+      "description": "SignedStatement is canonical JSON plus an ed25519 signature over\n\"cfgcanary/\u003cpurpose\u003e/v1\\n\" + payload."
+    },
+    "v1SubmitVersionResponse": {
+      "type": "object",
+      "properties": {
+        "report": {
+          "$ref": "#/definitions/v1ValidationReport"
+        },
+        "version": {
+          "$ref": "#/definitions/v1ConfigVersion",
+          "description": "Unset when rejected or dry_run."
+        }
+      }
+    },
+    "v1Target": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "generation": {
+          "type": "string",
+          "format": "int64"
+        },
+        "baselineVersion": {
+          "type": "string",
+          "format": "int64"
+        },
+        "candidateVersion": {
+          "type": "string",
+          "format": "int64"
+        },
+        "activeRing": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "releaseId": {
+          "type": "string"
+        },
+        "previousGoodVersion": {
+          "type": "string",
+          "format": "int64"
+        },
+        "frozen": {
+          "type": "boolean"
+        },
+        "frozenReason": {
+          "type": "string"
+        },
+        "updated": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ValidationIssue": {
+      "type": "object",
+      "properties": {
+        "stage": {
+          "type": "string",
+          "description": "Stage that produced it: limits, json, schema, cue, relative, wasm."
+        },
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string",
+          "description": "JSON pointer, when applicable."
+        }
+      }
+    },
+    "v1ValidationPolicy": {
+      "type": "object",
+      "properties": {
+        "limits": {
+          "$ref": "#/definitions/v1Limits"
+        },
+        "jsonSchema": {
+          "type": "string",
+          "description": "JSON Schema (draft 2020-12) document, as JSON text. Optional."
+        },
+        "cue": {
+          "type": "string",
+          "description": "CUE constraints unified with the payload. Optional."
+        },
+        "relative": {
+          "$ref": "#/definitions/v1RelativeGuards"
+        },
+        "wasm": {
+          "$ref": "#/definitions/v1WasmValidator"
+        }
+      }
+    },
+    "v1ValidationReport": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ValidationIssue"
+          }
+        },
+        "baseVersion": {
+          "type": "string",
+          "format": "int64",
+          "description": "Version the relative guards were evaluated against; 0 when none."
+        },
+        "stagesRun": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1VersionPayload": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "$ref": "#/definitions/v1ConfigVersion"
+        },
+        "payload": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "v1WasmValidator": {
+      "type": "object",
+      "properties": {
+        "sha256": {
+          "type": "string",
+          "description": "SHA-256 of the module. Set by the server."
+        },
+        "module": {
+          "type": "string",
+          "format": "byte",
+          "description": "Module bytes; only on RegisterConfig. Never returned."
+        },
+        "timeout": {
+          "type": "string"
+        },
+        "memoryLimitMib": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Linear memory limit in MiB. 0 means the server default."
+        },
+        "required": {
+          "type": "boolean",
+          "description": "When true, a validator that cannot run rejects the submission. Always\ntrue in v1; present so the policy is explicit in the stored spec."
+        }
+      }
+    }
+  }
+}

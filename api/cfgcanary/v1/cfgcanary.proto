@@ -1,0 +1,860 @@
+// cfgcanary API, version 1.
+//
+// ConfigService is used by agents. ControlService is used by operators, the CLI
+// and the Kubernetes controller, and is also served over REST by a gateway.
+//
+// Compatibility: fields are only added within v1. See docs/compatibility.md.
+syntax = "proto3";
+
+package cfgcanary.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/raunaksahahere/cfgcanary/api/gen/cfgcanary/v1;cfgcanaryv1";
+
+// ---------------------------------------------------------------------------
+// Agent-facing service
+// ---------------------------------------------------------------------------
+
+service ConfigService {
+  // Watch opens a long-lived stream. The server sends the desired state for the
+  // caller's ring whenever it changes, and once on connect for every
+  // subscription whose last_generation is behind.
+  rpc Watch(WatchRequest) returns (stream ConfigUpdate);
+
+  // GetDesired returns the current desired state for the caller. Agents use it
+  // for periodic reconciliation and to resume after missed stream messages.
+  rpc GetDesired(GetDesiredRequest) returns (GetDesiredResponse);
+
+  // ReportStatus records what the agent applied and what the SDK accepted.
+  rpc ReportStatus(ReportStatusRequest) returns (ReportStatusResponse);
+
+  // RefreshArtifact returns a fresh presigned URL for a version the caller is
+  // currently entitled to. The content identity does not change.
+  rpc RefreshArtifact(RefreshArtifactRequest) returns (RefreshArtifactResponse);
+}
+
+message Subscription {
+  string config = 1;
+  // Last version and generation the agent durably applied; 0 when none.
+  int64 last_version = 2;
+  int64 last_generation = 3;
+}
+
+message WatchRequest {
+  // Must match the instance bound to the client certificate.
+  string instance_id = 1;
+  // Informational only. Labels never influence ring assignment.
+  map<string, string> labels = 2;
+  repeated Subscription subscriptions = 3;
+  string agent_version = 4;
+}
+
+// SignedStatement is canonical JSON plus an ed25519 signature over
+// "cfgcanary/<purpose>/v1\n" + payload.
+message SignedStatement {
+  bytes payload = 1;
+  bytes signature = 2;
+  string key_id = 3;
+}
+
+message ConfigUpdate {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    // Desired state for this instance.
+    KIND_DESIRED = 1;
+    // The target has no baseline and this instance's ring is not exposed.
+    KIND_NO_CONFIG = 2;
+  }
+  Kind kind = 1;
+  string config = 2;
+  string environment = 3;
+  int64 generation = 4;
+  int64 version = 5;
+  string sha256 = 6;
+  int64 size = 7;
+  // Short-lived presigned GET URL in the configured object store.
+  string url = 8;
+  google.protobuf.Timestamp url_expires = 9;
+  // Artifact signature: binds bytes to config, version and environments.
+  SignedStatement artifact = 10;
+  // Delivery authorization: binds generation, environment and ring range.
+  SignedStatement delivery = 11;
+  // Ring the server assigned to this instance for the current policy.
+  int32 ring = 12;
+  string release_id = 13;
+}
+
+message GetDesiredRequest {
+  string instance_id = 1;
+  repeated Subscription subscriptions = 2;
+}
+
+message GetDesiredResponse {
+  repeated ConfigUpdate updates = 1;
+}
+
+enum ApplyState {
+  APPLY_STATE_UNSPECIFIED = 0;
+  // Verified and durably stored by the agent; not yet accepted by the SDK.
+  APPLY_STATE_APPLIED = 1;
+  // The application's parser accepted it and it is being served.
+  APPLY_STATE_ACCEPTED = 2;
+  // The application's parser rejected it; last-known-good is being served.
+  APPLY_STATE_REJECTED = 3;
+  // The agent could not verify or store it; nothing changed locally.
+  APPLY_STATE_FAILED = 4;
+  // The application crash-looped on it; it was quarantined.
+  APPLY_STATE_CRASH_LOOP = 5;
+}
+
+message InstanceConfigStatus {
+  string config = 1;
+  int64 generation = 2;
+  int64 version = 3;
+  ApplyState state = 4;
+  // Short machine-readable reason, never payload content.
+  string reason = 5;
+  // What the application is actually serving.
+  int64 serving_version = 6;
+  int64 serving_generation = 7;
+}
+
+message ReportStatusRequest {
+  string instance_id = 1;
+  repeated InstanceConfigStatus statuses = 2;
+}
+
+message ReportStatusResponse {}
+
+message RefreshArtifactRequest {
+  string instance_id = 1;
+  string config = 2;
+  int64 version = 3;
+}
+
+message RefreshArtifactResponse {
+  string url = 1;
+  google.protobuf.Timestamp url_expires = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Operator-facing service
+// ---------------------------------------------------------------------------
+
+service ControlService {
+  rpc RegisterConfig(RegisterConfigRequest) returns (Config) {
+    option (google.api.http) = {
+      post: "/v1/configs"
+      body: "*"
+    };
+  }
+  rpc GetConfig(GetConfigRequest) returns (Config) {
+    option (google.api.http) = {get: "/v1/configs/{name}"};
+  }
+  rpc ListConfigs(ListConfigsRequest) returns (ListConfigsResponse) {
+    option (google.api.http) = {get: "/v1/configs"};
+  }
+
+  // SubmitVersion validates a payload and, unless dry_run is set, stores it as a
+  // new immutable version.
+  rpc SubmitVersion(SubmitVersionRequest) returns (SubmitVersionResponse) {
+    option (google.api.http) = {
+      post: "/v1/configs/{name}/versions"
+      body: "*"
+    };
+  }
+  rpc GetVersion(GetVersionRequest) returns (ConfigVersion) {
+    option (google.api.http) = {get: "/v1/configs/{name}/versions/{version}"};
+  }
+  rpc ListVersions(ListVersionsRequest) returns (ListVersionsResponse) {
+    option (google.api.http) = {get: "/v1/configs/{name}/versions"};
+  }
+  rpc GetVersionPayload(GetVersionRequest) returns (VersionPayload) {
+    option (google.api.http) = {get: "/v1/configs/{name}/versions/{version}/payload"};
+  }
+  rpc DiffVersions(DiffVersionsRequest) returns (DiffVersionsResponse) {
+    option (google.api.http) = {get: "/v1/configs/{name}/diff"};
+  }
+
+  // CreateRelease starts a rollout. With dry_run it returns the plan and writes
+  // nothing.
+  rpc CreateRelease(CreateReleaseRequest) returns (CreateReleaseResponse) {
+    option (google.api.http) = {
+      post: "/v1/releases"
+      body: "*"
+    };
+  }
+  rpc GetRelease(GetReleaseRequest) returns (Release) {
+    option (google.api.http) = {get: "/v1/releases/{id}"};
+  }
+  rpc ListReleases(ListReleasesRequest) returns (ListReleasesResponse) {
+    option (google.api.http) = {get: "/v1/releases"};
+  }
+  rpc PromoteRelease(PromoteReleaseRequest) returns (Release) {
+    option (google.api.http) = {
+      post: "/v1/releases/{id}:promote"
+      body: "*"
+    };
+  }
+  rpc PauseRelease(ReleaseCommandRequest) returns (Release) {
+    option (google.api.http) = {
+      post: "/v1/releases/{id}:pause"
+      body: "*"
+    };
+  }
+  rpc ResumeRelease(ReleaseCommandRequest) returns (Release) {
+    option (google.api.http) = {
+      post: "/v1/releases/{id}:resume"
+      body: "*"
+    };
+  }
+  rpc RollbackRelease(ReleaseCommandRequest) returns (Release) {
+    option (google.api.http) = {
+      post: "/v1/releases/{id}:rollback"
+      body: "*"
+    };
+  }
+
+  // KillSwitch immediately returns every ring of a target to its previous
+  // known-good version and freezes the target. Break-glass, audited.
+  rpc KillSwitch(KillSwitchRequest) returns (KillSwitchResponse) {
+    option (google.api.http) = {
+      post: "/v1/targets/{config}/{environment}:kill"
+      body: "*"
+    };
+  }
+  rpc UnfreezeTarget(UnfreezeTargetRequest) returns (Target) {
+    option (google.api.http) = {
+      post: "/v1/targets/{config}/{environment}:unfreeze"
+      body: "*"
+    };
+  }
+  rpc GetTarget(GetTargetRequest) returns (Target) {
+    option (google.api.http) = {get: "/v1/targets/{config}/{environment}"};
+  }
+  // GetRingProjection returns, per ring, the desired version and its signed
+  // envelope. Used by sinks such as the Kubernetes controller.
+  rpc GetRingProjection(GetTargetRequest) returns (RingProjection) {
+    option (google.api.http) = {get: "/v1/targets/{config}/{environment}/rings"};
+  }
+
+  rpc ListInstances(ListInstancesRequest) returns (ListInstancesResponse) {
+    option (google.api.http) = {get: "/v1/instances"};
+  }
+  rpc ListAudit(ListAuditRequest) returns (ListAuditResponse) {
+    option (google.api.http) = {get: "/v1/audit"};
+  }
+  rpc GetServerInfo(GetServerInfoRequest) returns (ServerInfo) {
+    option (google.api.http) = {get: "/v1/info"};
+  }
+}
+
+// --- configs ---------------------------------------------------------------
+
+enum FailureMode {
+  FAILURE_MODE_UNSPECIFIED = 0;
+  // Keep serving last-known-good when the source is unreachable or stale.
+  FAILURE_MODE_FAIL_STATIC = 1;
+  // Mark the snapshot unusable once it is older than max_staleness.
+  FAILURE_MODE_FAIL_CLOSED = 2;
+}
+
+message Limits {
+  // Maximum payload size in bytes. Required, at most the server limit.
+  int64 max_bytes = 1;
+  // Maximum JSON nesting depth. 0 means the server default (64).
+  int32 max_depth = 2;
+  // Cardinality limits: a JSON pointer to an array or object and its maximum
+  // number of elements, e.g. {"/features": 200}.
+  map<string, int64> max_items = 3;
+}
+
+message RelativeGuards {
+  // Reject when size > max_size_ratio * previous size. 0 disables.
+  double max_size_ratio = 1;
+  // Reject when size < min_size_ratio * previous size. 0 disables.
+  double min_size_ratio = 2;
+  // Per JSON pointer: reject when the item count grows by more than this
+  // factor relative to the base version.
+  map<string, double> max_items_ratio = 3;
+  // Per JSON pointer: reject when the item count shrinks below this fraction.
+  map<string, double> min_items_ratio = 4;
+}
+
+message WasmValidator {
+  // SHA-256 of the module. Set by the server.
+  string sha256 = 1;
+  // Module bytes; only on RegisterConfig. Never returned.
+  bytes module = 2;
+  google.protobuf.Duration timeout = 3;
+  // Linear memory limit in MiB. 0 means the server default.
+  int32 memory_limit_mib = 4;
+  // When true, a validator that cannot run rejects the submission. Always
+  // true in v1; present so the policy is explicit in the stored spec.
+  bool required = 5;
+}
+
+message ValidationPolicy {
+  Limits limits = 1;
+  // JSON Schema (draft 2020-12) document, as JSON text. Optional.
+  string json_schema = 2;
+  // CUE constraints unified with the payload. Optional.
+  string cue = 3;
+  RelativeGuards relative = 4;
+  WasmValidator wasm = 5;
+}
+
+message Ring {
+  string name = 1;
+  // Cumulative share of the hash space, in basis points (1..10000).
+  int32 cumulative_bps = 2;
+}
+
+enum MetricKind {
+  METRIC_KIND_UNSPECIFIED = 0;
+  // bad_metric / total_metric, both counters.
+  METRIC_KIND_RATIO = 1;
+  // Fraction of observations above a bucket boundary of a histogram.
+  METRIC_KIND_HISTOGRAM_OVER = 2;
+  // Fraction of instances whose counter increased (e.g. restarts).
+  METRIC_KIND_INSTANCE_EVENT = 3;
+}
+
+message GateMetric {
+  string name = 1;
+  MetricKind kind = 2;
+  // Counter of all events (RATIO), histogram base name (HISTOGRAM_OVER) or
+  // event counter (INSTANCE_EVENT).
+  string metric = 3;
+  // Counter of bad events (RATIO).
+  string bad_metric = 4;
+  // Bucket boundary, exactly as exported in the "le" label (HISTOGRAM_OVER).
+  string le = 5;
+  // Extra label matchers, e.g. {"route": "/api"}.
+  map<string, string> matchers = 6;
+  // Tolerated absolute degradation of the proportion (non-inferiority margin).
+  double margin = 7;
+  // Roll back when the canary proportion is at or above this, regardless of
+  // control. 0 disables.
+  double hard_max = 8;
+  // Minimum total events per cohort before the metric can be evaluated.
+  int64 min_events = 9;
+}
+
+enum GateMode {
+  GATE_MODE_UNSPECIFIED = 0;
+  // Prometheus-backed canary/control comparison.
+  GATE_MODE_PROMETHEUS = 1;
+  // No metric gate: convergence, bake time and SDK evidence only. Promotion
+  // then requires an operator.
+  GATE_MODE_NONE = 2;
+}
+
+enum OnFail {
+  ON_FAIL_UNSPECIFIED = 0;
+  ON_FAIL_ROLLBACK = 1;
+  ON_FAIL_HALT = 2;
+}
+
+message GatePolicy {
+  GateMode mode = 1;
+  // Minimum time a ring stays exposed before the first look.
+  google.protobuf.Duration min_bake = 2;
+  google.protobuf.Duration look_interval = 3;
+  // Number of predeclared looks. Error probability is split across them.
+  int32 looks = 4;
+  double alpha_harm = 5;
+  double alpha_noninferiority = 6;
+  repeated GateMetric metrics = 7;
+  // Minimum instances reporting per cohort.
+  int32 min_instances = 8;
+  google.protobuf.Duration max_sample_age = 9;
+  google.protobuf.Duration eval_timeout = 10;
+  OnFail on_fail = 11;
+  // The comparison is INCONCLUSIVE when the control cohort's own proportion
+  // for any metric is above this. 0 disables.
+  double max_control_proportion = 12;
+}
+
+enum Promotion {
+  PROMOTION_UNSPECIFIED = 0;
+  PROMOTION_AUTO = 1;
+  PROMOTION_MANUAL = 2;
+}
+
+enum FinalStage {
+  FINAL_STAGE_UNSPECIFIED = 0;
+  // The last ring ends below 100%; the remainder is a holdout that stays on
+  // the baseline as control and converts when the release completes.
+  FINAL_STAGE_HOLDOUT = 1;
+  // The last ring is 100%: no concurrent control exists, so only hard
+  // thresholds and SDK evidence apply to it.
+  FINAL_STAGE_HARD_THRESHOLDS_ONLY = 2;
+}
+
+message RolloutPolicy {
+  repeated Ring rings = 1;
+  // Hash salt. Defaults to "<config>/<environment>". Frozen per release.
+  string salt = 2;
+  // Authenticated group -> ring index. Overrides hashing for that group.
+  map<string, int32> pinned_groups = 3;
+  // Minimum members in the first ring and in its control cohort.
+  int32 min_instances = 4;
+  // Fraction of reachable ring members that must have ACCEPTED.
+  double acceptance_threshold = 5;
+  // Fraction of ring members that must be reachable to evaluate at all.
+  double min_reachable_fraction = 6;
+  google.protobuf.Duration rollout_timeout = 7;
+  google.protobuf.Duration rollback_timeout = 8;
+  Promotion promotion = 9;
+  GatePolicy gate = 10;
+  // SDK rejections / crash loops tolerated in exposed rings before rollback.
+  int32 max_sdk_rejections = 11;
+  int32 max_crash_loops = 12;
+  FinalStage final_stage = 13;
+  // An instance counts as reachable if seen within this window.
+  google.protobuf.Duration reachable_window = 14;
+}
+
+message ConfigSpec {
+  string name = 1;
+  string description = 2;
+  // "json" in v1.
+  string format = 3;
+  ValidationPolicy validation = 4;
+  FailureMode failure_mode = 5;
+  google.protobuf.Duration max_staleness = 6;
+  // Rollout policy per environment. A config can only be released to
+  // environments listed here.
+  map<string, RolloutPolicy> environments = 7;
+  // Committed versions kept per config beyond those still referenced.
+  int32 retain_versions = 8;
+}
+
+message Config {
+  ConfigSpec spec = 1;
+  int64 spec_revision = 2;
+  google.protobuf.Timestamp created = 3;
+  google.protobuf.Timestamp updated = 4;
+  int64 latest_version = 5;
+}
+
+message RegisterConfigRequest {
+  ConfigSpec spec = 1;
+  // When set, update only if the stored revision matches.
+  int64 expected_revision = 2;
+  string request_id = 3;
+}
+
+message GetConfigRequest {
+  string name = 1;
+}
+
+message ListConfigsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListConfigsResponse {
+  repeated Config configs = 1;
+  string next_page_token = 2;
+}
+
+// --- versions --------------------------------------------------------------
+
+message ValidationIssue {
+  // Stage that produced it: limits, json, schema, cue, relative, wasm.
+  string stage = 1;
+  string code = 2;
+  string message = 3;
+  // JSON pointer, when applicable.
+  string path = 4;
+}
+
+message ValidationReport {
+  bool ok = 1;
+  repeated ValidationIssue issues = 2;
+  // Version the relative guards were evaluated against; 0 when none.
+  int64 base_version = 3;
+  repeated string stages_run = 4;
+}
+
+message SubmitVersionRequest {
+  string name = 1;
+  bytes payload = 2;
+  string description = 3;
+  // Environments this version may be delivered to. Empty means every
+  // environment of the config at submission time.
+  repeated string environments = 4;
+  // Validate only; store nothing.
+  bool dry_run = 5;
+  string request_id = 6;
+}
+
+message SubmitVersionResponse {
+  ValidationReport report = 1;
+  // Unset when rejected or dry_run.
+  ConfigVersion version = 2;
+}
+
+message ConfigVersion {
+  string config = 1;
+  int64 version = 2;
+  string sha256 = 3;
+  int64 size = 4;
+  string description = 5;
+  repeated string environments = 6;
+  string created_by = 7;
+  google.protobuf.Timestamp created = 8;
+  SignedStatement artifact = 9;
+  bool purged = 10;
+}
+
+message GetVersionRequest {
+  string name = 1;
+  int64 version = 2;
+}
+
+message VersionPayload {
+  ConfigVersion version = 1;
+  bytes payload = 2;
+}
+
+message ListVersionsRequest {
+  string name = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListVersionsResponse {
+  repeated ConfigVersion versions = 1;
+  string next_page_token = 2;
+}
+
+message DiffVersionsRequest {
+  string name = 1;
+  // 0 means "the empty document".
+  int64 from = 2;
+  int64 to = 3;
+}
+
+message DiffEntry {
+  // added, removed, changed.
+  string op = 1;
+  // JSON pointer.
+  string path = 2;
+  // Compact JSON; truncated for large values.
+  string before = 3;
+  string after = 4;
+}
+
+message DiffVersionsResponse {
+  int64 from = 1;
+  int64 to = 2;
+  int64 from_size = 3;
+  int64 to_size = 4;
+  repeated DiffEntry entries = 5;
+  bool truncated = 6;
+  int32 total_changes = 7;
+}
+
+// --- releases --------------------------------------------------------------
+
+enum ReleaseState {
+  RELEASE_STATE_UNSPECIFIED = 0;
+  RELEASE_STATE_PENDING = 1;
+  RELEASE_STATE_ROLLING = 2;
+  RELEASE_STATE_BAKING = 3;
+  RELEASE_STATE_HALTED = 4;
+  RELEASE_STATE_ROLLING_BACK = 5;
+  RELEASE_STATE_ROLLED_BACK = 6;
+  RELEASE_STATE_COMPLETE = 7;
+}
+
+enum GateVerdict {
+  GATE_VERDICT_UNSPECIFIED = 0;
+  GATE_VERDICT_PASS = 1;
+  GATE_VERDICT_FAIL = 2;
+  GATE_VERDICT_INCONCLUSIVE = 3;
+}
+
+message CohortCounts {
+  // Members assigned to the cohort.
+  int32 eligible = 1;
+  // Of those, seen within the reachable window.
+  int32 reachable = 2;
+  // Reported APPLIED or better for the current generation and version.
+  int32 applied = 3;
+  // Reported ACCEPTED for the current generation and version.
+  int32 accepted = 4;
+  int32 rejected = 5;
+  int32 failed = 6;
+  int32 crash_loop = 7;
+}
+
+message RingStatus {
+  int32 index = 1;
+  string name = 2;
+  int32 cumulative_bps = 3;
+  // pending, rolling, baking, passed, rolled_back.
+  string phase = 4;
+  // Counts for members of exactly this ring.
+  CohortCounts counts = 5;
+  int64 generation = 6;
+  google.protobuf.Timestamp started = 7;
+  google.protobuf.Timestamp bake_started = 8;
+  int32 looks_done = 9;
+  GateVerdict gate_verdict = 10;
+  string gate_reason = 11;
+}
+
+message RollbackStatus {
+  // Version every ring was returned to.
+  int64 fallback_version = 1;
+  int64 generation = 2;
+  // Members that had been sent the candidate.
+  int32 exposed = 3;
+  // Of those, confirmed serving the fallback at the rollback generation.
+  int32 confirmed = 4;
+  // Reachable but not yet confirmed.
+  int32 pending = 5;
+  // Not seen within the reachable window; they reconcile on reconnect.
+  int32 unreachable = 6;
+  repeated string unreachable_sample = 7;
+  bool converged = 8;
+  google.protobuf.Timestamp started = 9;
+  google.protobuf.Timestamp converged_at = 10;
+}
+
+message Release {
+  string id = 1;
+  string config = 2;
+  string environment = 3;
+  int64 version = 4;
+  int64 baseline_version = 5;
+  ReleaseState state = 6;
+  bool paused = 7;
+  // Index of the highest ring exposed to the candidate; -1 before start.
+  int32 active_ring = 8;
+  repeated RingStatus rings = 9;
+  // Machine-readable reason for the current state, e.g. gate_fail.
+  string reason = 10;
+  string message = 11;
+  int64 generation = 12;
+  int64 epoch = 13;
+  int64 state_version = 14;
+  RolloutPolicy policy = 15;
+  string created_by = 16;
+  google.protobuf.Timestamp created = 17;
+  google.protobuf.Timestamp updated = 18;
+  google.protobuf.Timestamp finished = 19;
+  RollbackStatus rollback = 20;
+  // Members not in any ring until completion (holdout).
+  CohortCounts holdout = 21;
+  // emergency when created by a kill switch with no active release.
+  string kind = 22;
+}
+
+message PlanRing {
+  int32 index = 1;
+  string name = 2;
+  int32 cumulative_bps = 3;
+  // Current members hashed or pinned into exactly this ring.
+  int32 members = 4;
+  int32 reachable = 5;
+  repeated string sample = 6;
+}
+
+message ReleasePlan {
+  string config = 1;
+  string environment = 2;
+  int64 version = 3;
+  int64 baseline_version = 4;
+  repeated PlanRing rings = 5;
+  int32 holdout_members = 6;
+  int32 total_members = 7;
+  RolloutPolicy policy = 8;
+  // Problems that would make CreateRelease fail.
+  repeated string blockers = 9;
+  repeated string warnings = 10;
+  DiffVersionsResponse diff = 11;
+}
+
+message CreateReleaseRequest {
+  string config = 1;
+  string environment = 2;
+  int64 version = 3;
+  bool dry_run = 4;
+  string request_id = 5;
+  string note = 6;
+}
+
+message CreateReleaseResponse {
+  ReleasePlan plan = 1;
+  // Unset for dry runs.
+  Release release = 2;
+}
+
+message GetReleaseRequest {
+  string id = 1;
+}
+
+message ListReleasesRequest {
+  string config = 1;
+  string environment = 2;
+  bool active_only = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message ListReleasesResponse {
+  repeated Release releases = 1;
+  string next_page_token = 2;
+}
+
+message PromoteReleaseRequest {
+  string id = 1;
+  // Ring the caller believes is active. -1 or unset+has_expected=false skips
+  // the check.
+  int32 expected_ring = 2;
+  bool has_expected_ring = 3;
+  // Skip gate and bake requirements. Requires the break-glass role and a
+  // reason; audited as an override.
+  bool override = 4;
+  string reason = 5;
+  string request_id = 6;
+}
+
+message ReleaseCommandRequest {
+  string id = 1;
+  string reason = 2;
+  string request_id = 3;
+}
+
+message KillSwitchRequest {
+  string config = 1;
+  string environment = 2;
+  string reason = 3;
+  string request_id = 4;
+}
+
+message KillSwitchResponse {
+  Target target = 1;
+  Release release = 2;
+}
+
+message UnfreezeTargetRequest {
+  string config = 1;
+  string environment = 2;
+  string reason = 3;
+}
+
+message GetTargetRequest {
+  string config = 1;
+  string environment = 2;
+}
+
+message Target {
+  string config = 1;
+  string environment = 2;
+  int64 generation = 3;
+  int64 baseline_version = 4;
+  int64 candidate_version = 5;
+  int32 active_ring = 6;
+  string release_id = 7;
+  int64 previous_good_version = 8;
+  bool frozen = 9;
+  string frozen_reason = 10;
+  google.protobuf.Timestamp updated = 11;
+}
+
+message RingDesired {
+  int32 ring = 1;
+  string name = 2;
+  // 0 when the ring has nothing to run yet.
+  int64 version = 3;
+  string sha256 = 4;
+  int64 size = 5;
+  SignedStatement artifact = 6;
+  SignedStatement delivery = 7;
+}
+
+message RingProjection {
+  Target target = 1;
+  repeated RingDesired rings = 2;
+}
+
+// --- instances, audit, info -------------------------------------------------
+
+message Instance {
+  string instance_id = 1;
+  string environment = 2;
+  string group = 3;
+  map<string, string> labels = 4;
+  bool connected = 5;
+  google.protobuf.Timestamp last_seen = 6;
+  string agent_version = 7;
+  repeated InstanceConfigStatus statuses = 8;
+}
+
+message ListInstancesRequest {
+  string environment = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListInstancesResponse {
+  repeated Instance instances = 1;
+  string next_page_token = 2;
+}
+
+message AuditEvent {
+  int64 id = 1;
+  google.protobuf.Timestamp time = 2;
+  // Authenticated identity, or "controller".
+  string actor = 3;
+  string action = 4;
+  // allowed, denied.
+  string outcome = 5;
+  string config = 6;
+  string environment = 7;
+  string release_id = 8;
+  int64 generation = 9;
+  int64 epoch = 10;
+  string reason = 11;
+  // JSON object with action-specific detail. Never payload content.
+  string detail = 12;
+}
+
+message ListAuditRequest {
+  string config = 1;
+  string environment = 2;
+  string release_id = 3;
+  string action = 4;
+  int32 page_size = 5;
+  // Opaque; results are newest first.
+  string page_token = 6;
+}
+
+message ListAuditResponse {
+  repeated AuditEvent events = 1;
+  string next_page_token = 2;
+}
+
+message GetServerInfoRequest {}
+
+message ServerInfo {
+  string version = 1;
+  string commit = 2;
+  string build_date = 3;
+  string go_version = 4;
+  // Identity and roles of the caller, as the server sees them.
+  string identity = 5;
+  repeated string roles = 6;
+  bool leader = 7;
+  int64 epoch = 8;
+  int32 streams = 9;
+}

@@ -1,0 +1,18 @@
+# build output
+/bin/
+/dist/
+*.test
+*.out
+coverage.*
+# local tools and generated dev material (certificates, keys, credentials)
+/.tools/
+/.dev/
+/deploy/compose/.dev/
+# compiled wasm is built from source (make wasm)
+*.wasm
+# editor / OS
+.idea/
+.vscode/
+.DS_Store
+# bulky benchmark logs stay out of git; compact results live in bench/results
+/bench/logs/
