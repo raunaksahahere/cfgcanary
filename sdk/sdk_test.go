@@ -70,7 +70,9 @@ func (h *harness) opts() Options[ratelimits.Config] {
 }
 
 func (h *harness) open(o Options[ratelimits.Config]) *Client[ratelimits.Config] {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	// Generous: Open returns as soon as a config is published. A tight bound
+	// only adds flakiness on a loaded machine (cold build cache, -race).
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	c, err := Open(ctx, o)
 	if err != nil {
@@ -118,7 +120,7 @@ func TestBootstrap(t *testing.T) {
 		t.Fatalf("%+v", c.Info())
 	}
 	h.push(1, 1, cfgJSON("real", 100))
-	tu.Eventually(t, 2*time.Second, "real config", func() bool { return c.Get().Service == "real" })
+	tu.Eventually(t, 15*time.Second, "real config", func() bool { return c.Get().Service == "real" })
 
 	bad := h.opts()
 	bad.Bootstrap = []byte(`{"schema_version":2}`)
@@ -141,7 +143,7 @@ func TestRejectKeepsLKG(t *testing.T) {
 	c := h.open(o)
 	// Generic checks pass, the consumer's parser rejects (schema_version 2).
 	h.push(2, 2, `{"schema_version":2,"service":"checkout","timeout_ms":100,"features":[],"limits":[]}`)
-	tu.Eventually(t, 2*time.Second, "REJECTED status", func() bool { return status(t, h.root).State == "REJECTED" })
+	tu.Eventually(t, 15*time.Second, "REJECTED status", func() bool { return status(t, h.root).State == "REJECTED" })
 	s := status(t, h.root)
 	if s.Generation != 2 || s.ServingVersion != 1 || c.Get().Service != "checkout" || c.Info().Version != 1 {
 		t.Fatalf("status %+v info %+v", s, c.Info())
@@ -157,7 +159,7 @@ func TestRejectKeepsLKG(t *testing.T) {
 	}
 	// The next good generation is accepted.
 	h.push(3, 3, cfgJSON("checkout-v3", 100))
-	tu.Eventually(t, 2*time.Second, "v3", func() bool { return c2.Info().Version == 3 })
+	tu.Eventually(t, 15*time.Second, "v3", func() bool { return c2.Info().Version == 3 })
 	if s := status(t, h.root); s.State != "ACCEPTED" || s.ServingVersion != 3 {
 		t.Fatalf("%+v", s)
 	}
@@ -175,7 +177,7 @@ func TestSameContentNewGeneration(t *testing.T) {
 	o.Parse = func(b []byte) (ratelimits.Config, error) { parses++; return ratelimits.Parse(b) }
 	c := h.open(o)
 	h.push(1, 2, cfgJSON("a", 10)) // promotion to the next ring re-signs the same content
-	tu.Eventually(t, 2*time.Second, "generation 2", func() bool { return c.Info().Generation == 2 })
+	tu.Eventually(t, 15*time.Second, "generation 2", func() bool { return c.Info().Generation == 2 })
 	if parses != 1 {
 		t.Fatalf("same content parsed %d times", parses)
 	}
@@ -188,7 +190,7 @@ func TestCrashLoopQuarantine(t *testing.T) {
 	c := h.open(o)
 	c.MarkHealthy()
 	h.push(2, 2, cfgJSON("crashy", 100))
-	tu.Eventually(t, 2*time.Second, "v2", func() bool { return c.Info().Version == 2 })
+	tu.Eventually(t, 15*time.Second, "v2", func() bool { return c.Info().Version == 2 })
 	c.Close()
 	// The process now crashes repeatedly while serving v2.
 	for start := 2; start <= 3; start++ {
@@ -207,7 +209,7 @@ func TestCrashLoopQuarantine(t *testing.T) {
 	}
 	// A rollback (newer generation, old content) is served normally.
 	h.push(1, 3, cfgJSON("good", 100))
-	tu.Eventually(t, 2*time.Second, "rollback", func() bool { return c4.Info().Generation == 3 })
+	tu.Eventually(t, 15*time.Second, "rollback", func() bool { return c4.Info().Generation == 3 })
 }
 
 func TestCorruptCacheFallsBack(t *testing.T) {
@@ -217,7 +219,7 @@ func TestCorruptCacheFallsBack(t *testing.T) {
 	c := h.open(o)
 	c.MarkHealthy()
 	h.push(2, 2, cfgJSON("two", 100))
-	tu.Eventually(t, 2*time.Second, "v2", func() bool { return c.Info().Version == 2 })
+	tu.Eventually(t, 15*time.Second, "v2", func() bool { return c.Info().Version == 2 })
 	c.Close()
 	// Corrupt the current object behind the agent's back.
 	sha := cache.Digest([]byte(cfgJSON("two", 100)))
@@ -255,7 +257,7 @@ func TestStalenessFailClosed(t *testing.T) {
 	_ = c.Get() // Get still returns the snapshot
 	// The agent reaching the control plane makes it fresh again.
 	cache.BumpHeartbeat(h.root, 99)
-	tu.Eventually(t, 2*time.Second, "fresh", func() bool { return c.Usable() })
+	tu.Eventually(t, 15*time.Second, "fresh", func() bool { return c.Usable() })
 }
 
 func TestSnapshotImmutability(t *testing.T) {
