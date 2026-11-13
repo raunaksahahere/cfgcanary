@@ -43,7 +43,7 @@ Counterexamples considered: *rollback from v8 to v7 after agents saw v8* (allowe
 by the agent); *an ack for the candidate arriving after rollback* (stored generation is already
 13 or the ring counter ignores generation 12 rows).
 
-Tests: `internal/rollout` property tests (`TestProperty_GenerationMonotonic`),
+Tests: `internal/rollout` (`TestProperty_RandomInterleavings`, `TestRollbackIsNewGenerationOlderVersion`),
 `internal/agent` (`TestStaleUpdateIgnored`, `TestRollbackAppliesOlderVersion`),
 `internal/store` (`TestStatusOldGenerationIgnored`).
 
@@ -71,9 +71,9 @@ Tests: `internal/rollout` property tests (`TestProperty_GenerationMonotonic`),
   planning prints actual cohort sizes and refuses to create a release whose canary or control
   cohort is smaller than the policy's `min_instances`.
 
-Tests: `internal/ring` (`TestStableAcrossCalls`, `TestProperty_DisjointCumulative`),
-`test/integration` (`TestLaterRingsNeverReceiveCandidate`, `TestSpoofedInstanceRejected`,
-`TestGroupCannotEscape`).
+Tests: `internal/ring` (`TestBucketIsPinnedToV1`, `TestProperty_DisjointCumulative`, `TestPinnedGroupOverridesHash`),
+`test/integration` (`TestRefreshArtifactEntitlement`, `TestTransportAndIdentity`,
+`TestManualReleaseThroughEveryRing`, `TestGatedReleaseAndCanaryRollback`).
 
 ## I3. One durable authority
 
@@ -90,8 +90,8 @@ Tests: `internal/ring` (`TestStableAcrossCalls`, `TestProperty_DisjointCumulativ
   request_id)` returns the recorded result instead of acting twice. Commands without one are
   guarded by `expected_ring` / current state and return `FAILED_PRECONDITION` when stale.
 
-Tests: `test/integration` (`TestConcurrentCreateOneWins`, `TestDuplicatePromoteIdempotent`,
-`TestRollbackRacesPromote`, `TestTransitionAndAuditAtomic`).
+Tests: `internal/store` integration tests (`TestConcurrentCreateOneWins`, `TestDuplicateCommandsIdempotent`,
+`TestRollbackRacesPromote`, `TestTransitionAndAuditAtomic`, `TestDatabaseInvariantsEnforced`).
 
 ## I4. Fenced leadership
 
@@ -114,8 +114,8 @@ becomes leader and rolls back; A resumes and commits.* A's transaction reads epo
 and aborts. Even without the epoch, the `state_version` recheck would fail; both are kept
 because they fail independently.
 
-Tests: `test/integration` (`TestStaleLeaderWriteRejected`, `TestLockConnectionLossDemotes`,
-`TestLeaderKilledMidPromotion`).
+Tests: `internal/store` (`TestStaleLeaderWriteRejected`), `test/chaos`
+(`TestLockConnectionLostAndStaleWriteFenced`, `TestLeaderKilledMidRollout`, `TestDatabaseOutage`).
 
 ## I5. Fail-safe consumers
 
@@ -147,14 +147,16 @@ Tests: `test/integration` (`TestStaleLeaderWriteRejected`, `TestLockConnectionLo
 What LKG does **not** mean: an old value is not proven safe forever. See
 [Fail-open and fail-closed](#fail-open-and-fail-closed-per-config-type).
 
-Tests: `internal/agent` (`TestBadSignatureKeepsLKG`, `TestBadDigestKeepsLKG`,
-`TestCrashBetweenObjectAndPointer`, `TestCorruptPointerFallsBack`, `TestDiskErrorsKeepLKG`),
+Tests: `internal/agent` (`TestVerificationFailuresKeepCurrent`, `TestCrashBetweenObjectAndPointer`,
+`TestCorruptPointerFallsBack`, `TestDiskErrorsKeepCurrent`, `TestPermissionError`),
 `sdk` (`TestColdStartNoCache`, `TestBootstrap`, `TestRejectKeepsLKG`, `TestCrashLoopQuarantine`,
-`TestSnapshotImmutability`).
+`TestSnapshotImmutability`, `TestStalenessFailClosed`, `TestCorruptCacheFallsBack`), `test/integration`
+(`TestSDKRejectionKeepsLKGAndRollsBack`), `test/chaos` (`TestCrashLoopRollsBack`, `TestColdRestartWithControlPlaneDown`).
 
 ## I6. Safe gating
 
-- A gate look returns exactly one of `PASS`, `FAIL`, `INCONCLUSIVE`. Missing series, stale
+- A gate look returns exactly one of `PASS`, `FAIL`, `INCONCLUSIVE` (three zones: within the margin,
+  beyond it, or unknown). Missing series, stale
   samples, too few instances or requests, NaN/Inf, a query error or timeout, and a degraded
   control cohort all produce `INCONCLUSIVE` with a reason. Only `PASS` can promote.
 - Queries select by config, environment, release, ring and `config_version`, so traffic from
@@ -167,9 +169,10 @@ Tests: `internal/agent` (`TestBadSignatureKeepsLKG`, `TestBadDigestKeepsLKG`,
 - A paused release does not advance. Bake time elapsing while paused does not count as a look,
   and resuming re-evaluates from fresh evidence.
 
-Tests: `internal/gate` (`TestMissingDataNeverPasses` table, `TestStaleSamples`, `TestNaN`,
-`TestControlDegraded`, `FuzzEvaluate`), `internal/rollout` (`TestPausedDoesNotAdvance`,
-`TestInconclusiveHaltsAtLastLook`).
+Tests: `internal/gate` (`TestMissingDataNeverPasses` table: no data, too few instances or events,
+NaN, Inf, inconsistent counts, degraded control; `TestThreeZones`, `FuzzEvaluate`), `internal/rollout`
+(`TestPausedDoesNotAdvance`, `TestInconclusiveHaltsAtLastLook`), `test/chaos`
+(`TestMetricsOutageNeverPromotes`: Prometheus down and no metrics).
 
 ## I7. Explicit emergency precedence
 
@@ -187,8 +190,9 @@ Tests: `internal/gate` (`TestMissingDataNeverPasses` table, `TestStaleSamples`, 
   The CLI reports confirmed, pending and unreachable agents separately and never reports a
   rollback as complete on the strength of the database row alone.
 
-Tests: `test/integration` (`TestKillSwitchSupersedesPromotion`, `TestKillSwitchFreezes`,
-`TestRollbackWhileDisconnected`), `internal/rollout` property tests.
+Tests: `internal/rollout` (`TestKillSwitch`, `TestStaleDecisionRejected`, property tests),
+`internal/store` (`TestKillSwitchWithoutRelease`, `TestRollbackRacesPromote`), `test/chaos`
+(`TestPartitionDuringRollback`).
 
 ## I8. Bounded work
 
@@ -201,7 +205,7 @@ Tests: `test/integration` (`TestKillSwitchSupersedesPromotion`, `TestKillSwitchF
 | Malformed or huge payload | Size limit enforced on the wire before buffering; decompressed-size limit; JSON depth and cardinality limits before validation. |
 | Validator hang or bomb | wazero with a memory page limit, a wall-clock deadline that closes the module, bounded stdout, a concurrency semaphore. |
 | Controller stuck on one release | Each release is reconciled under its own deadline; an error on one does not block the others. |
-| Shutdown | Every goroutine is tied to a context; servers drain with a deadline. Tests run under `goleak`-style checks for the agent and hub. |
+| Shutdown | Every goroutine is tied to a context; watch streams are drained with `UNAVAILABLE` and servers stop within a deadline. |
 
 ## First start, staleness and operator intervention
 

@@ -274,10 +274,11 @@ type recorder struct {
 	connecting []time.Time
 	connected  map[string]time.Time
 	applied    map[string]map[int64]time.Time // instance -> version -> first apply
+	received   map[string]map[int64]time.Time // instance -> version -> first receipt
 }
 
 func newRecorder() *recorder {
-	return &recorder{connected: map[string]time.Time{}, applied: map[string]map[int64]time.Time{}}
+	return &recorder{connected: map[string]time.Time{}, applied: map[string]map[int64]time.Time{}, received: map[string]map[int64]time.Time{}}
 }
 
 func (r *recorder) Connecting(string) {
@@ -290,6 +291,26 @@ func (r *recorder) Connected(id string) {
 	r.mu.Lock()
 	r.connected[id] = time.Now()
 	r.mu.Unlock()
+}
+
+func (r *recorder) Received(id, _ string, _, version int64) {
+	r.mu.Lock()
+	m := r.received[id]
+	if m == nil {
+		m = map[int64]time.Time{}
+		r.received[id] = m
+	}
+	if _, ok := m[version]; !ok {
+		m[version] = time.Now()
+	}
+	r.mu.Unlock()
+}
+
+func (r *recorder) receivedAt(id string, version int64) (time.Time, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	t, ok := r.received[id][version]
+	return t, ok
 }
 
 func (r *recorder) Applied(id, _ string, _, version int64) {

@@ -75,6 +75,9 @@ type Config struct {
 type Observer interface {
 	Connecting(instance string)
 	Connected(instance string)
+	// Received is called when a new generation arrives, before verification
+	// and the durable write (fan-out latency without local disk costs).
+	Received(instance, config string, generation, version int64)
 	Applied(instance, config string, generation, version int64)
 }
 
@@ -363,6 +366,9 @@ func (a *Agent) Handle(ctx context.Context, client pb.ConfigServiceClient, u *pb
 		return
 	}
 	a.mu.Unlock()
+	if a.cfg.Observer != nil {
+		a.cfg.Observer.Received(a.cfg.InstanceID, u.Config, u.Generation, u.Version)
+	}
 
 	err := a.apply(ctx, client, st, u)
 	if err != nil {

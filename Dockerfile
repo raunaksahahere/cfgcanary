@@ -1,9 +1,12 @@
 # syntax=docker/dockerfile:1
-# Multi-stage build of the single cfgcanary binary. The runtime image is
+# Multi-stage build of the single cfgcanary binary (cross-compiled on the
+# build platform, so multi-arch images need no emulation). The runtime image is
 # distroless (no shell), runs as a non-root user and contains the example
 # config, payloads and WASM validator used by `cfgcanary demo`.
 ARG GO_VERSION=1.27.4
-FROM golang:${GO_VERSION}-bookworm AS build
+FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-bookworm AS build
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
 WORKDIR /src
 ENV CGO_ENABLED=0 GOFLAGS=-trimpath
 COPY go.mod go.sum ./
@@ -13,7 +16,7 @@ ARG VERSION=0.1.0-dev
 ARG COMMIT=unknown
 ARG DATE=unknown
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
-    go build -ldflags "-s -w -X github.com/raunaksahahere/cfgcanary/internal/buildinfo.Version=${VERSION} \
+    GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags "-s -w -X github.com/raunaksahahere/cfgcanary/internal/buildinfo.Version=${VERSION} \
       -X github.com/raunaksahahere/cfgcanary/internal/buildinfo.Commit=${COMMIT} \
       -X github.com/raunaksahahere/cfgcanary/internal/buildinfo.Date=${DATE}" \
       -o /out/cfgcanary ./cmd/cfgcanary && \

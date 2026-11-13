@@ -270,9 +270,26 @@ With heterogeneous instances or low traffic, 5 canaries mostly **halt**: they ca
 either way, so they never promote harm but need an operator or a `hard_max`. Full table, including
 heterogeneous and low-traffic cases: [`summary.md`](bench/results/summary.md).
 
-Propagation latency and control-plane resources at 50, 100, 1,000 and 5,000 agents are being
-measured with the same harness and will be added to `bench/results` when the runs finish; no
-numbers are quoted for them yet.
+**Propagation at scale** (all agents, the control plane and PostgreSQL on one laptop; per ring,
+from the ring's exposure committed in PostgreSQL; p50 / p99):
+
+| Agents | Update received by agent | Applied (durable) | Served by the SDK | Rollback confirmed by every exposed agent |
+|---:|---|---|---|---|
+| 100 | 11–21 ms / 13–28 ms | 37–55 ms / 40–63 ms | 39–56 ms / 43–63 ms | 0.11 s (54 agents) |
+| 1,000 | 0.33–0.44 s / 0.56–0.71 s | 1.2–1.5 s / 1.5–1.8 s | 1.3–1.5 s / 1.5–1.8 s | 2.07 s (489 agents) |
+| 5,000 | 2.0–3.1 s / 4.1–8.8 s | 9.9–17.7 s / 12.5–26.1 s | 9.7–18.3 s / 12.5–25.5 s | 13.4 s (2,497 agents) |
+
+Ranges span the three rings. "Received" is the control plane's fan-out. "Applied" and "served"
+add each agent's fsyncs; in the simulator every agent shares one disk with the server and
+PostgreSQL, so at 5,000 they measure that contention more than delivery, and separate hosts would
+not share it. The 5,000-agent run needed a raised task limit (the session's cgroup allowed 7,177
+tasks; see [benchmarks.md](docs/benchmarks.md#limits-and-caveats)). Marginal control-plane cost: **about 115 MB of memory and
+0.03 CPU cores (idle) per 1,000 open watch streams**.
+
+**Chaos suite** (12 scenarios: leader killed mid-rollout, lock session lost, partition during a
+rollback, stalled consumer, reconnect storms, Prometheus down, no metrics, object-store and database
+outages, crash loop, cold restart without the control plane): all pass, **0 agent or SDK crashes**.
+State-machine statement coverage: 93.6%.
 
 ## Guarantees and non-guarantees
 
@@ -306,12 +323,17 @@ numbers are quoted for them yet.
 
 | | |
 |---|---|
+| 🚀 [Usage](docs/usage.md) | CLI commands, exit codes and JSON output, the config spec, the Go SDK, the agent |
 | 🧱 [Architecture](docs/ARCHITECTURE.md) | Components, data model, state machine, delivery path, trust, Kubernetes mode |
 | 🛡️ [Failure model and invariants](docs/invariants.md) | What is promised, how it is enforced, which tests try to break it, fail-open vs fail-closed |
-| ✅ [Requirements and evidence](docs/requirements.md) | Every requirement from the design brief mapped to code and verification |
-| 🧭 [Decisions](docs/decisions) | ADRs: PostgreSQL and fencing, snapshot watches, object store, gate statistics, WASM ABI, signing, Kubernetes |
-| 📊 [Benchmarks](bench/results/summary.md) | Raw results, definitions, environment and commands |
-| ⎈ [Helm chart](deploy/helm/cfgcanary) · [kind example](deploy/kind) | Kubernetes installation and the verified end-to-end example |
+| 🎓 [Design guide](docs/design-guide.md) | The code paths and the reasoning: generations, fencing, static stability, jitter, gate statistics |
+| 🔌 [Protocol and API](docs/protocol.md) | Watch semantics, signed statements, acknowledgements, REST mapping ([OpenAPI](api/openapi/cfgcanary/v1/cfgcanary.swagger.json)) |
+| ⎈ [Kubernetes](docs/kubernetes.md) | `ConfigRelease`, ring ConfigMaps, the Helm chart, what a ConfigMap alone cannot promise |
+| 🧯 [Runbooks](docs/runbooks.md) | Emergencies, halted releases, outages, shutdown and upgrades, backups, rotation, retention |
+| 📈 [Observability](docs/observability.md) | Metrics and cardinality, tracing, logs, audit |
+| 📊 [Benchmarks](docs/benchmarks.md) | Method, reproduction and limits; results in [`bench/results`](bench/results/summary.md) |
+| ✅ [Requirements and evidence](docs/requirements.md) | Every requirement mapped to code, verification and status |
+| 🧭 [Decisions](docs/decisions) · [Compatibility](docs/compatibility.md) · [Changelog](CHANGELOG.md) | ADRs, versioning promise, release history |
 
 <details>
 <summary><b>Development</b></summary>
@@ -346,8 +368,8 @@ last-known-good consumers for arbitrary structured config in one small open-sour
 
 ## Contributing and security
 
-Issues and pull requests are welcome. Please report vulnerabilities privately through GitHub's
-security advisory form for this repository rather than in a public issue.
+Issues and pull requests are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Report
+vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 

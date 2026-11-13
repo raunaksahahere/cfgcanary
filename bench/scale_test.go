@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"testing"
@@ -26,6 +27,9 @@ import (
 type RingResult struct {
 	Ring    int32 `json:"ring"`
 	Members int   `json:"members"`
+	// Received: ring exposure committed -> the update reached the agent
+	// (control-plane fan-out, before any local disk work).
+	Received dist `json:"received"`
 	// Applied: ring exposure committed in PostgreSQL -> agent durably
 	// applied the version (pointer swapped). Accepted: -> the SDK published
 	// it to the application.
@@ -100,6 +104,11 @@ func sizes() []int {
 // plane resources for each fleet size.
 func TestScale(t *testing.T) {
 	requireBench(t)
+	// Thousands of simulated agents in one process block in fsync at the
+	// same moment, and each blocked syscall holds an OS thread. Raise Go's
+	// thread cap (default 10000) for the simulator; the OS/cgroup task limit
+	// still applies and is recorded in the results if it is hit.
+	debug.SetMaxThreads(30000)
 	var results []ScaleResult
 	for _, n := range sizes() {
 		t.Run(fmt.Sprint(n), func(t *testing.T) {
@@ -110,6 +119,8 @@ func TestScale(t *testing.T) {
 	}
 	writeJSON(t, "scale.json", map[string]any{"environment": environment("CFGCANARY_BENCH=1 go test ./bench -run TestScale -timeout 90m"),
 		"definitions": map[string]string{
+			"received": "ring exposure transition committed in PostgreSQL until the update reached the agent (before verification and the durable write): the control plane's fan-out latency",
+			"disk":     "all simulated agents share one disk; every generation change makes each agent fsync its pointer and the SDK its state and status files, so applied/accepted at large N include fsync contention that separate hosts would not have",
 			"applied":  "ring exposure transition committed in PostgreSQL (release ring 'started' timestamp, database clock) until the agent durably swapped its cache pointer to the new version; all clocks on one host",
 			"accepted": "same start until the SDK published the version to the application (first time the member served it)",
 			"rollback": "operator rollback committed until each exposed agent's SDK served the fallback version again; server-converged = until GetRelease reported every exposed instance confirmed",
@@ -119,11 +130,11 @@ func TestScale(t *testing.T) {
 	var rows []string
 	for _, r := range results {
 		for _, rr := range r.Rings {
-			rows = append(rows, fmt.Sprintf("%d,%d,%d,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f", r.Agents, rr.Ring, rr.Members,
-				rr.Applied.P50, rr.Applied.P99, rr.Applied.Max, rr.Accepted.P50, rr.Accepted.P99, rr.Accepted.Max))
+			rows = append(rows, fmt.Sprintf("%d,%d,%d,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f", r.Agents, rr.Ring, rr.Members,
+				rr.Received.P50, rr.Received.P99, rr.Applied.P50, rr.Applied.P99, rr.Applied.Max, rr.Accepted.P50, rr.Accepted.P99, rr.Accepted.Max))
 		}
 	}
-	writeCSV(t, "scale_propagation.csv", "agents,ring,members,applied_p50_ms,applied_p99_ms,applied_max_ms,accepted_p50_ms,accepted_p99_ms,accepted_max_ms", rows)
+	writeCSV(t, "scale_propagation.csv", "agents,ring,members,received_p50_ms,received_p99_ms,applied_p50_ms,applied_p99_ms,applied_max_ms,accepted_p50_ms,accepted_p99_ms,accepted_max_ms", rows)
 }
 
 func runScale(t *testing.T, n int) ScaleResult {
@@ -184,8 +195,11 @@ func runScale(t *testing.T, n int) ScaleResult {
 	for i, rs := range rel.Rings {
 		started := rs.Started.AsTime()
 		rr := RingResult{Ring: int32(i), Members: len(byRing[int32(i)])}
-		var applied, accepted []time.Duration
+		var received, applied, accepted []time.Duration
 		for _, m := range byRing[int32(i)] {
+			if at, ok := rec.receivedAt(m.ID, v2); ok {
+				received = append(received, at.Sub(started))
+			}
 			if at, ok := rec.appliedAt(m.ID, v2); ok {
 				applied = append(applied, at.Sub(started))
 			} else {
@@ -195,7 +209,7 @@ func runScale(t *testing.T, n int) ScaleResult {
 				accepted = append(accepted, at.Sub(started))
 			}
 		}
-		rr.Applied, rr.Accepted = summarize(applied), summarize(accepted)
+		rr.Received, rr.Applied, rr.Accepted = summarize(received), summarize(applied), summarize(accepted)
 		res.Rings = append(res.Rings, rr)
 	}
 
@@ -219,7 +233,9 @@ func runScale(t *testing.T, n int) ScaleResult {
 	rb, err := h.admin.RollbackRelease(ctx, &pb.ReleaseCommandRequest{Id: id, Reason: "bench"})
 	testutil.Must(t, err, "rollback")
 	rbStart := rb.Rollback.Started.AsTime()
-	r := waitRelease(t, h, id, 10*time.Minute, func(r *pb.Release) bool { return r.Rollback != nil && r.Rollback.Converged })
+	r := waitRelease(t, h, id, 10*time.Minute, func(r *pb.Release) bool {
+		return r.State == pb.ReleaseState_RELEASE_STATE_ROLLED_BACK && r.Rollback != nil && r.Rollback.Converged && r.Rollback.ConvergedAt != nil
+	})
 	res.RollbackServerSecs = r.Rollback.ConvergedAt.AsTime().Sub(rbStart).Seconds()
 	testutil.Eventually(t, 5*time.Minute, "fleet back on v2", func() bool { return len(f.Served(v2)) == n })
 	var rbd []time.Duration

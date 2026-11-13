@@ -1,0 +1,455 @@
+{
+  "definitions": {
+    "accepted": "same start until the SDK published the version to the application (first time the member served it)",
+    "applied": "ring exposure transition committed in PostgreSQL (release ring 'started' timestamp, database clock) until the agent durably swapped its cache pointer to the new version; all clocks on one host",
+    "disk": "all simulated agents share one disk; every generation change makes each agent fsync its pointer and the SDK its state and status files, so applied/accepted at large N include fsync contention that separate hosts would not have",
+    "received": "ring exposure transition committed in PostgreSQL until the update reached the agent (before verification and the durable write): the control plane's fan-out latency",
+    "rollback": "operator rollback committed until each exposed agent's SDK served the fallback version again; server-converged = until GetRelease reported every exposed instance confirmed",
+    "server": "separate cfgcanary server process; CPU from process_cpu_seconds_total rate, RSS from process_resident_memory_bytes; idle = 20 s with all streams open and no changes",
+    "workload": "manual promotion, gate none, rings 10%/50%/100%, payload 5.7 KB, agents dial with full-jitter backoff (base 250 ms, cap 10 s), reconcile every 60 s, SDK poll 1 s plus in-process notification"
+  },
+  "environment": {
+    "host": "local workstation (AMD Ryzen 5 5600H with Radeon Graphics)",
+    "cpu": "AMD Ryzen 5 5600H with Radeon Graphics",
+    "cpus": 12,
+    "memory_mb": 7262,
+    "os": "linux/amd64",
+    "go": "go1.27.4",
+    "commit": "ca91d95e1c09",
+    "dirty": true,
+    "postgres": "postgres:18.6 (fsync=off, tmpfs; see deploy/compose/test-deps.yaml)",
+    "s3": "pgsty/minio:RELEASE.2026-08-04T00-00-00Z",
+    "timestamp": "2026-11-13T14:26:33Z",
+    "command": "CFGCANARY_BENCH=1 go test ./bench -run TestScale -timeout 90m"
+  },
+  "results": [
+    {
+      "agents": 50,
+      "connect_seconds": 0.993241671,
+      "seed_seconds": 5.245856163,
+      "rings": [
+        {
+          "ring": 0,
+          "members": 5,
+          "received": {
+            "n": 5,
+            "p50_ms": 73.508,
+            "p90_ms": 73.855,
+            "p99_ms": 73.855,
+            "max_ms": 73.855
+          },
+          "applied": {
+            "n": 5,
+            "p50_ms": 231.945,
+            "p90_ms": 239.867,
+            "p99_ms": 239.867,
+            "max_ms": 239.867
+          },
+          "accepted": {
+            "n": 5,
+            "p50_ms": 232.258,
+            "p90_ms": 240.442,
+            "p99_ms": 240.442,
+            "max_ms": 240.442
+          },
+          "missing": 0
+        },
+        {
+          "ring": 1,
+          "members": 24,
+          "received": {
+            "n": 24,
+            "p50_ms": 46.399,
+            "p90_ms": 47.106,
+            "p99_ms": 47.615,
+            "max_ms": 47.615
+          },
+          "applied": {
+            "n": 24,
+            "p50_ms": 122.286,
+            "p90_ms": 123.62,
+            "p99_ms": 124.279,
+            "max_ms": 124.279
+          },
+          "accepted": {
+            "n": 24,
+            "p50_ms": 123.603,
+            "p90_ms": 125.352,
+            "p99_ms": 125.557,
+            "max_ms": 125.557
+          },
+          "missing": 0
+        },
+        {
+          "ring": 2,
+          "members": 21,
+          "received": {
+            "n": 21,
+            "p50_ms": 47.404,
+            "p90_ms": 48.607,
+            "p99_ms": 49.069,
+            "max_ms": 49.069
+          },
+          "applied": {
+            "n": 21,
+            "p50_ms": 197.321,
+            "p90_ms": 198.23,
+            "p99_ms": 198.951,
+            "max_ms": 198.951
+          },
+          "accepted": {
+            "n": 21,
+            "p50_ms": 197.667,
+            "p90_ms": 198.595,
+            "p99_ms": 199.318,
+            "max_ms": 199.318
+          },
+          "missing": 0
+        }
+      ],
+      "release_seconds": 0.945664454,
+      "rollback_exposed": 29,
+      "rollback_per_agent": {
+        "n": 29,
+        "p50_ms": 17.5,
+        "p90_ms": 20.15,
+        "p99_ms": 21.612,
+        "max_ms": 21.612
+      },
+      "rollback_server_converged_seconds": 0.072442,
+      "rollback_missing": 0,
+      "server": {
+        "idle_cpu_cores": 0.007999089704391551,
+        "idle_rss_mb": 67.178496,
+        "release_cpu_cores": 0.1266098736906243,
+        "peak_rss_mb": 77.180928,
+        "goroutines": 274,
+        "idle_cpu_cores_per_1k_streams": 0.159981794087831,
+        "rss_mb_per_1k_streams": 1343.56992,
+        "release_cpu_cores_per_1k_streams": 2.5321974738124857
+      },
+      "fleet_process_rss_mb": 62.45703125
+    },
+    {
+      "agents": 100,
+      "connect_seconds": 1.048183384,
+      "seed_seconds": 3.615745744,
+      "rings": [
+        {
+          "ring": 0,
+          "members": 9,
+          "received": {
+            "n": 9,
+            "p50_ms": 11.208,
+            "p90_ms": 12.684,
+            "p99_ms": 12.684,
+            "max_ms": 12.684
+          },
+          "applied": {
+            "n": 9,
+            "p50_ms": 37.47,
+            "p90_ms": 40.47,
+            "p99_ms": 40.47,
+            "max_ms": 40.47
+          },
+          "accepted": {
+            "n": 9,
+            "p50_ms": 39.375,
+            "p90_ms": 42.585,
+            "p99_ms": 42.585,
+            "max_ms": 42.585
+          },
+          "missing": 0
+        },
+        {
+          "ring": 1,
+          "members": 45,
+          "received": {
+            "n": 45,
+            "p50_ms": 20.695,
+            "p90_ms": 27.297,
+            "p99_ms": 28.278,
+            "max_ms": 28.278
+          },
+          "applied": {
+            "n": 45,
+            "p50_ms": 52.709,
+            "p90_ms": 57.085,
+            "p99_ms": 59.822,
+            "max_ms": 59.822
+          },
+          "accepted": {
+            "n": 45,
+            "p50_ms": 53.298,
+            "p90_ms": 57.872,
+            "p99_ms": 60.242,
+            "max_ms": 60.242
+          },
+          "missing": 0
+        },
+        {
+          "ring": 2,
+          "members": 46,
+          "received": {
+            "n": 46,
+            "p50_ms": 20.436,
+            "p90_ms": 23.713,
+            "p99_ms": 25.696,
+            "max_ms": 25.696
+          },
+          "applied": {
+            "n": 46,
+            "p50_ms": 55.112,
+            "p90_ms": 62.061,
+            "p99_ms": 63.086,
+            "max_ms": 63.086
+          },
+          "accepted": {
+            "n": 46,
+            "p50_ms": 55.713,
+            "p90_ms": 62.357,
+            "p99_ms": 63.355,
+            "max_ms": 63.355
+          },
+          "missing": 0
+        }
+      ],
+      "release_seconds": 0.551244349,
+      "rollback_exposed": 54,
+      "rollback_per_agent": {
+        "n": 54,
+        "p50_ms": 36.955,
+        "p90_ms": 41.458,
+        "p99_ms": 44.709,
+        "max_ms": 44.709
+      },
+      "rollback_server_converged_seconds": 0.106802,
+      "rollback_missing": 0,
+      "server": {
+        "idle_cpu_cores": 0.010998798774990827,
+        "idle_rss_mb": 73.723904,
+        "release_cpu_cores": 0.34282472947493087,
+        "peak_rss_mb": 81.129472,
+        "goroutines": 524,
+        "idle_cpu_cores_per_1k_streams": 0.10998798774990827,
+        "rss_mb_per_1k_streams": 737.23904,
+        "release_cpu_cores_per_1k_streams": 3.4282472947493083
+      },
+      "fleet_process_rss_mb": 82.453125
+    },
+    {
+      "agents": 1000,
+      "connect_seconds": 5.048890411,
+      "seed_seconds": 4.572646957,
+      "rings": [
+        {
+          "ring": 0,
+          "members": 93,
+          "received": {
+            "n": 93,
+            "p50_ms": 434.633,
+            "p90_ms": 706.412,
+            "p99_ms": 706.696,
+            "max_ms": 706.696
+          },
+          "applied": {
+            "n": 93,
+            "p50_ms": 1364.852,
+            "p90_ms": 1473.679,
+            "p99_ms": 1504.392,
+            "max_ms": 1504.392
+          },
+          "accepted": {
+            "n": 93,
+            "p50_ms": 1367.815,
+            "p90_ms": 1474.206,
+            "p99_ms": 1504.811,
+            "max_ms": 1504.811
+          },
+          "missing": 0
+        },
+        {
+          "ring": 1,
+          "members": 396,
+          "received": {
+            "n": 396,
+            "p50_ms": 332.999,
+            "p90_ms": 447.836,
+            "p99_ms": 561.672,
+            "max_ms": 711.938
+          },
+          "applied": {
+            "n": 396,
+            "p50_ms": 1241.164,
+            "p90_ms": 1625.195,
+            "p99_ms": 1803.972,
+            "max_ms": 1879.406
+          },
+          "accepted": {
+            "n": 396,
+            "p50_ms": 1305.545,
+            "p90_ms": 1657.607,
+            "p99_ms": 1811.145,
+            "max_ms": 1896.71
+          },
+          "missing": 0
+        },
+        {
+          "ring": 2,
+          "members": 511,
+          "received": {
+            "n": 511,
+            "p50_ms": 334.632,
+            "p90_ms": 522.158,
+            "p99_ms": 673.117,
+            "max_ms": 698.97
+          },
+          "applied": {
+            "n": 511,
+            "p50_ms": 1521.548,
+            "p90_ms": 1590.494,
+            "p99_ms": 1630.859,
+            "max_ms": 1685.496
+          },
+          "accepted": {
+            "n": 511,
+            "p50_ms": 1521.787,
+            "p90_ms": 1593.05,
+            "p99_ms": 1631.402,
+            "max_ms": 1686.153
+          },
+          "missing": 0
+        }
+      ],
+      "release_seconds": 6.23050979,
+      "rollback_exposed": 489,
+      "rollback_per_agent": {
+        "n": 489,
+        "p50_ms": 1115.579,
+        "p90_ms": 1473.62,
+        "p99_ms": 1664.501,
+        "max_ms": 1884.784
+      },
+      "rollback_server_converged_seconds": 2.072742,
+      "rollback_missing": 0,
+      "server": {
+        "idle_cpu_cores": 0.04398905927212037,
+        "idle_rss_mb": 183.263232,
+        "release_cpu_cores": 0.381280528032494,
+        "peak_rss_mb": 217.399296,
+        "goroutines": 5024,
+        "idle_cpu_cores_per_1k_streams": 0.04398905927212037,
+        "rss_mb_per_1k_streams": 183.263232,
+        "release_cpu_cores_per_1k_streams": 0.381280528032494
+      },
+      "fleet_process_rss_mb": 408.0546875
+    },
+    {
+      "agents": 5000,
+      "connect_seconds": 25.128415706,
+      "seed_seconds": 55.844424577,
+      "rings": [
+        {
+          "ring": 0,
+          "members": 488,
+          "received": {
+            "n": 488,
+            "p50_ms": 3062.981,
+            "p90_ms": 6050.817,
+            "p99_ms": 6051.626,
+            "max_ms": 6051.735
+          },
+          "applied": {
+            "n": 488,
+            "p50_ms": 17747.665,
+            "p90_ms": 21434.381,
+            "p99_ms": 23033.995,
+            "max_ms": 23058.948
+          },
+          "accepted": {
+            "n": 488,
+            "p50_ms": 18322.746,
+            "p90_ms": 21017.233,
+            "p99_ms": 23039.521,
+            "max_ms": 23072.894
+          },
+          "missing": 0
+        },
+        {
+          "ring": 1,
+          "members": 2009,
+          "received": {
+            "n": 2009,
+            "p50_ms": 2613.879,
+            "p90_ms": 7843.113,
+            "p99_ms": 8787.219,
+            "max_ms": 9754.594
+          },
+          "applied": {
+            "n": 2009,
+            "p50_ms": 16854.838,
+            "p90_ms": 25192.329,
+            "p99_ms": 26061.543,
+            "max_ms": 27176.996
+          },
+          "accepted": {
+            "n": 2009,
+            "p50_ms": 16467.946,
+            "p90_ms": 24212.785,
+            "p99_ms": 25498.458,
+            "max_ms": 27175.977
+          },
+          "missing": 0
+        },
+        {
+          "ring": 2,
+          "members": 2503,
+          "received": {
+            "n": 2503,
+            "p50_ms": 1959.091,
+            "p90_ms": 3329.739,
+            "p99_ms": 4083.859,
+            "max_ms": 5491.562
+          },
+          "applied": {
+            "n": 2503,
+            "p50_ms": 9904.231,
+            "p90_ms": 11558.921,
+            "p99_ms": 12502.526,
+            "max_ms": 13127.207
+          },
+          "accepted": {
+            "n": 2503,
+            "p50_ms": 9741.123,
+            "p90_ms": 11527.021,
+            "p99_ms": 12500.507,
+            "max_ms": 13127.579
+          },
+          "missing": 0
+        }
+      ],
+      "release_seconds": 65.725338072,
+      "rollback_exposed": 2497,
+      "rollback_per_agent": {
+        "n": 2497,
+        "p50_ms": 7122.106,
+        "p90_ms": 8838.255,
+        "p99_ms": 10182.861,
+        "max_ms": 11651.509
+      },
+      "rollback_server_converged_seconds": 13.393354,
+      "rollback_missing": 0,
+      "server": {
+        "idle_cpu_cores": 0.1674561217710857,
+        "idle_rss_mb": 633.847808,
+        "release_cpu_cores": 0.2674842958994187,
+        "peak_rss_mb": 695.513088,
+        "goroutines": 25184,
+        "idle_cpu_cores_per_1k_streams": 0.03349122435421714,
+        "rss_mb_per_1k_streams": 126.7695616,
+        "release_cpu_cores_per_1k_streams": 0.05349685917988374
+      },
+      "fleet_process_rss_mb": 1666.1328125
+    }
+  ]
+}

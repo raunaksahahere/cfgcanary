@@ -69,8 +69,14 @@ func main() {
 			}
 		}
 	}
+	memMB := 0
+	if b, err := os.ReadFile("/proc/meminfo"); err == nil {
+		var kb int
+		fmt.Sscanf(strings.SplitN(string(b), "\n", 2)[0], "MemTotal: %d kB", &kb)
+		memMB = kb / 1024
+	}
 	doc := map[string]any{
-		"environment": map[string]any{"cpu": cpu, "cpus": runtime.NumCPU(), "os": runtime.GOOS + "/" + runtime.GOARCH, "go": runtime.Version(),
+		"environment": map[string]any{"cpu": cpu, "cpus": runtime.NumCPU(), "memory_mb": memMB, "os": runtime.GOOS + "/" + runtime.GOARCH, "go": runtime.Version(),
 			"commit": strings.TrimSpace(string(commit)), "timestamp": time.Now().UTC().Format(time.RFC3339),
 			"command": "go test -json -count=1 ./test/chaos | go run ./bench/chaosjson"},
 		"scenarios": list,

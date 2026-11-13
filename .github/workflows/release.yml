@@ -1,0 +1,141 @@
+name: Release
+
+# Pushing a tag vX.Y.Z builds archives, stages a draft release, verifies each
+# binary on a native runner, then publishes the release and the image.
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: version surfaces agree with the tag
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          grep -q "^version: $v$" deploy/helm/cfgcanary/Chart.yaml
+          grep -q "^appVersion: \"$v\"$" deploy/helm/cfgcanary/Chart.yaml
+          grep -q "^## \[$v\]" CHANGELOG.md
+          grep -q "VERSION ?= $v$" Makefile
+      - run: scripts/dist.sh "${GITHUB_REF_NAME#v}"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  draft:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist
+      - name: create or update the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="docs/release-notes/${GITHUB_REF_NAME}.md"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/*.tar.gz dist/SHA256SUMS --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/*.tar.gz dist/SHA256SUMS --draft --prerelease \
+              --title "cfgcanary ${GITHUB_REF_NAME} (alpha)" --notes-file "$notes" --verify-tag
+          fi
+
+  verify:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {runner: ubuntu-24.04, os: linux, arch: amd64}
+          - {runner: ubuntu-24.04-arm, os: linux, arch: arm64}
+          - {runner: macos-15, os: darwin, arch: arm64}
+          - {runner: macos-15-intel, os: darwin, arch: amd64}
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist
+      - name: checksum, unpack and run natively
+        shell: bash
+        run: |
+          cd dist
+          v="${GITHUB_REF_NAME#v}"
+          f="cfgcanary_${v}_${{ matrix.os }}_${{ matrix.arch }}.tar.gz"
+          grep " $f\$" SHA256SUMS | shasum -a 256 -c -
+          tar -xzf "$f"
+          bin="./cfgcanary_${v}_${{ matrix.os }}_${{ matrix.arch }}/cfgcanary"
+          "$bin" version | tee version.txt
+          grep -q "cfgcanary $v " version.txt
+          "$bin" -o json version
+          # Exercise real code paths: dev PKI (crypto), scaffolding, local validation tooling.
+          "$bin" dev bootstrap --dir "$RUNNER_TEMP/dev"
+          "$bin" dev bootstrap --dir "$RUNNER_TEMP/dev" | grep -q "nothing changed"
+          "$bin" init --dir "$RUNNER_TEMP/scaffold" --name smoke
+          test -s "$RUNNER_TEMP/scaffold/spec.yaml"
+          # A command that needs the server must fail cleanly with exit code 7 (unavailable).
+          set +e
+          "$bin" --pki-dir "$RUNNER_TEMP/dev/pki" --server 127.0.0.1:9 --timeout 3s info
+          code=$?
+          set -e
+          test "$code" -eq 7
+
+  publish:
+    needs: [draft, verify]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: publish the verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false --prerelease
+
+  image:
+    needs: verify
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: v
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: build and push linux/amd64 and linux/arm64
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            VERSION=${{ steps.v.outputs.version }}
+            COMMIT=${{ github.sha }}
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ghcr.io/${{ github.repository }}:${{ steps.v.outputs.version }}
+          labels: |
+            org.opencontainers.image.version=${{ steps.v.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}

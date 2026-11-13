@@ -1,0 +1,79 @@
+{
+  "client_crashes": 0,
+  "environment": {
+    "command": "go test -json -count=1 ./test/chaos | go run ./bench/chaosjson",
+    "commit": "ca91d95e1c09",
+    "cpu": "AMD Ryzen 5 5600H with Radeon Graphics",
+    "cpus": 12,
+    "go": "go1.27.4",
+    "memory_mb": 7262,
+    "os": "linux/amd64",
+    "timestamp": "2026-11-13T14:33:44Z"
+  },
+  "expected_initialization_failures": 1,
+  "failed_scenarios": 0,
+  "notes": "Client crashes counts panics or fatal errors from any agent, SDK or test goroutine in the chaos run. The one expected initialization failure is the typed sdk.InitError on a cold start with neither cache nor bootstrap (sdk TestColdStartNoCache), which is the documented behaviour rather than a crash.",
+  "scenarios": [
+    {
+      "name": "TestColdRestartWithControlPlaneDown",
+      "result": "PASS",
+      "seconds": 1.89
+    },
+    {
+      "name": "TestCrashLoopRollsBack",
+      "result": "PASS",
+      "seconds": 6.15
+    },
+    {
+      "name": "TestDatabaseOutage",
+      "result": "PASS",
+      "seconds": 7.35
+    },
+    {
+      "name": "TestLeaderKilledMidRollout",
+      "result": "PASS",
+      "seconds": 8.83
+    },
+    {
+      "name": "TestLockConnectionLostAndStaleWriteFenced",
+      "result": "PASS",
+      "seconds": 5.84
+    },
+    {
+      "name": "TestMetricsOutageNeverPromotes",
+      "result": "PASS",
+      "seconds": 13.7
+    },
+    {
+      "name": "TestMetricsOutageNeverPromotes/no-metrics",
+      "result": "PASS",
+      "seconds": 6.89
+    },
+    {
+      "name": "TestMetricsOutageNeverPromotes/prometheus-down",
+      "result": "PASS",
+      "seconds": 6.81
+    },
+    {
+      "name": "TestObjectStoreOutage",
+      "result": "PASS",
+      "seconds": 11.88
+    },
+    {
+      "name": "TestPartitionDuringRollback",
+      "result": "PASS",
+      "seconds": 6.92
+    },
+    {
+      "name": "TestReconnectStorm",
+      "result": "PASS",
+      "seconds": 13.59
+    },
+    {
+      "name": "TestSlowConsumer",
+      "result": "PASS",
+      "seconds": 4.51
+    }
+  ],
+  "state_machine_statement_coverage": "93.6%"
+}

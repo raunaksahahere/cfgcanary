@@ -73,6 +73,7 @@ func main() {
 			Rings          []struct {
 				Ring     int32 `json:"ring"`
 				Members  int   `json:"members"`
+				Received dist  `json:"received"`
 				Applied  dist  `json:"applied"`
 				Accepted dist  `json:"accepted"`
 				Missing  int   `json:"missing"`
@@ -97,22 +98,29 @@ func main() {
 	}
 	if load(dir, "scale.json", &scale) {
 		b.WriteString("\n## Propagation and rollback at scale (`scale.json`)\n\n" + envLine(scale.Environment) + "\n\n")
-		b.WriteString("| Agents | Ring | Members | Agent applied p50 / p99 / max | SDK accepted p50 / p99 / max |\n|---:|---:|---:|---|---|\n")
+		b.WriteString("| Agents | Ring | Members | Received by agent p50 / p99 | Agent applied p50 / p99 | SDK accepted p50 / p99 / max |\n|---:|---:|---:|---|---|---|\n")
 		for _, r := range scale.Results {
 			for _, rr := range r.Rings {
-				fmt.Fprintf(&b, "| %d | %d | %d | %s / %s / %s | %s / %s / %s |\n", r.Agents, rr.Ring, rr.Members,
-					secs(rr.Applied.P50), secs(rr.Applied.P99), secs(rr.Applied.Max), secs(rr.Accepted.P50), secs(rr.Accepted.P99), secs(rr.Accepted.Max))
+				fmt.Fprintf(&b, "| %d | %d | %d | %s / %s | %s / %s | %s / %s / %s |\n", r.Agents, rr.Ring, rr.Members,
+					secs(rr.Received.P50), secs(rr.Received.P99), secs(rr.Applied.P50), secs(rr.Applied.P99),
+					secs(rr.Accepted.P50), secs(rr.Accepted.P99), secs(rr.Accepted.Max))
 			}
 		}
-		b.WriteString("\n| Agents | Rollback: exposed | per-agent p50 / p99 / max | server-reported convergence | Server idle CPU / RSS | per 1,000 streams (idle CPU, RSS) | CPU during release (per 1,000) |\n|---:|---:|---|---|---|---|---|\n")
+		b.WriteString("\n| Agents | Rollback: exposed | per-agent p50 / p99 / max | server-reported convergence | Server idle CPU | Server idle RSS | Server CPU during release |\n|---:|---:|---|---|---:|---:|---:|\n")
 		for _, r := range scale.Results {
 			s := r.Server
-			fmt.Fprintf(&b, "| %d | %d | %s / %s / %s | %.2f s | %.3f cores / %.0f MB | %.3f cores, %.1f MB | %.3f cores |\n", r.Agents, r.RollbackExposed,
+			fmt.Fprintf(&b, "| %d | %d | %s / %s / %s | %.2f s | %.3f cores | %.0f MB | %.2f cores |\n", r.Agents, r.RollbackExposed,
 				secs(r.RollbackPerAgent.P50), secs(r.RollbackPerAgent.P99), secs(r.RollbackPerAgent.Max), r.RollbackServerSecs,
-				s.IdleCPUCores, s.IdleRSSMB, s.CPUCoresPer1kIdle, s.RSSMBPer1kStreams, s.ReleaseCPUCoresPer1k)
+				s.IdleCPUCores, s.IdleRSSMB, s.ReleaseCPUCores)
+		}
+		if n := len(scale.Results); n >= 2 {
+			lo, hi := scale.Results[0], scale.Results[n-1]
+			k := float64(hi.Agents-lo.Agents) / 1000
+			fmt.Fprintf(&b, "\nMarginal control-plane cost per 1,000 open streams (slope between %d and %d agents): **%.1f MB RSS** and **%.3f CPU cores idle**. Dividing totals by stream count would overstate this at small N, where the process baseline dominates.\n",
+				lo.Agents, hi.Agents, (hi.Server.IdleRSSMB-lo.Server.IdleRSSMB)/k, (hi.Server.IdleCPUCores-lo.Server.IdleCPUCores)/k)
 		}
 		b.WriteString("\nDefinitions:\n")
-		for _, k := range []string{"applied", "accepted", "rollback", "server", "workload"} {
+		for _, k := range []string{"received", "applied", "accepted", "disk", "rollback", "server", "workload"} {
 			fmt.Fprintf(&b, "- **%s**: %s\n", k, scale.Definitions[k])
 		}
 	}
