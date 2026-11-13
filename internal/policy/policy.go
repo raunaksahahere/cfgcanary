@@ -131,6 +131,12 @@ func Normalize(config, env string, in *pb.RolloutPolicy) (*pb.RolloutPolicy, err
 		if g.MinInstances < 2 {
 			return nil, errors.New("gate.min_instances must be at least 2 (variance between instances needs two)")
 		}
+		if g.InstanceLabel == "" {
+			g.InstanceLabel = "cfgcanary_instance"
+		}
+		if !labelName.MatchString(g.InstanceLabel) {
+			return nil, errors.New("gate.instance_label is not a valid label name")
+		}
 		if g.OnFail == pb.OnFail_ON_FAIL_UNSPECIFIED {
 			g.OnFail = pb.OnFail_ON_FAIL_ROLLBACK
 		}

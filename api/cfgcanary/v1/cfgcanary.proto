@@ -377,6 +377,9 @@ message GatePolicy {
   // The comparison is INCONCLUSIVE when the control cohort's own proportion
   // for any metric is above this. 0 disables.
   double max_control_proportion = 12;
+  // Label that identifies an instance in both the application's metrics and
+  // the SDK's cfgcanary_sdk_config_info series. Default "cfgcanary_instance".
+  string instance_label = 13;
 }
 
 enum Promotion {

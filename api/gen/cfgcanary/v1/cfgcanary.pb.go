@@ -1782,8 +1782,11 @@ type GatePolicy struct {
 	// The comparison is INCONCLUSIVE when the control cohort's own proportion
 	// for any metric is above this. 0 disables.
 	MaxControlProportion float64 `protobuf:"fixed64,12,opt,name=max_control_proportion,json=maxControlProportion,proto3" json:"max_control_proportion,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Label that identifies an instance in both the application's metrics and
+	// the SDK's cfgcanary_sdk_config_info series. Default "cfgcanary_instance".
+	InstanceLabel string `protobuf:"bytes,13,opt,name=instance_label,json=instanceLabel,proto3" json:"instance_label,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GatePolicy) Reset() {
@@ -1898,6 +1901,13 @@ func (x *GatePolicy) GetMaxControlProportion() float64 {
 		return x.MaxControlProportion
 	}
 	return 0
+}
+
+func (x *GatePolicy) GetInstanceLabel() string {
+	if x != nil {
+		return x.InstanceLabel
+	}
+	return ""
 }
 
 type RolloutPolicy struct {
@@ -5759,7 +5769,7 @@ const file_cfgcanary_v1_cfgcanary_proto_rawDesc = "" +
 	"min_events\x18\t \x01(\x03R\tminEvents\x1a;\n" +
 	"\rMatchersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd3\x04\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xfa\x04\n" +
 	"\n" +
 	"GatePolicy\x12*\n" +
 	"\x04mode\x18\x01 \x01(\x0e2\x16.cfgcanary.v1.GateModeR\x04mode\x124\n" +
@@ -5775,7 +5785,8 @@ const file_cfgcanary_v1_cfgcanary_proto_rawDesc = "" +
 	"\feval_timeout\x18\n" +
 	" \x01(\v2\x19.google.protobuf.DurationR\vevalTimeout\x12-\n" +
 	"\aon_fail\x18\v \x01(\x0e2\x14.cfgcanary.v1.OnFailR\x06onFail\x124\n" +
-	"\x16max_control_proportion\x18\f \x01(\x01R\x14maxControlProportion\"\xb6\x06\n" +
+	"\x16max_control_proportion\x18\f \x01(\x01R\x14maxControlProportion\x12%\n" +
+	"\x0einstance_label\x18\r \x01(\tR\rinstanceLabel\"\xb6\x06\n" +
 	"\rRolloutPolicy\x12(\n" +
 	"\x05rings\x18\x01 \x03(\v2\x12.cfgcanary.v1.RingR\x05rings\x12\x12\n" +
 	"\x04salt\x18\x02 \x01(\tR\x04salt\x12R\n" +

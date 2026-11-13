@@ -1419,6 +1419,10 @@
           "type": "number",
           "format": "double",
           "description": "The comparison is INCONCLUSIVE when the control cohort's own proportion\nfor any metric is above this. 0 disables."
+        },
+        "instanceLabel": {
+          "type": "string",
+          "description": "Label that identifies an instance in both the application's metrics and\nthe SDK's cfgcanary_sdk_config_info series. Default \"cfgcanary_instance\"."
         }
       }
     },
