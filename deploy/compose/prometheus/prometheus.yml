@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 2s
+  evaluation_interval: 2s
+scrape_configs:
+  - job_name: cfgcanary-server
+    static_configs: [{targets: ["server:9464"]}]
+  - job_name: cfgcanary-sim
+    static_configs: [{targets: ["sim:9465"]}]

@@ -77,6 +77,9 @@ func (c *Client[T]) updateInfoMetric(i Info) {
 	m.last[key] = l
 	m.mu.Unlock()
 	m.info.With(l).Set(1)
+	// Zero-initialise counters so the first rejection is visible to rate().
+	m.failures.WithLabelValues(inst, cfg).Add(0)
+	m.crashLoops.WithLabelValues(inst, cfg).Add(0)
 	if changed {
 		// Same content and release under a newer generation keeps the
 		// original timestamp: the instance has served it all along.

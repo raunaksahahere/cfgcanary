@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -22,6 +23,7 @@ import (
 	"github.com/raunaksahahere/cfgcanary/internal/rollout"
 	"github.com/raunaksahahere/cfgcanary/internal/sign"
 	"github.com/raunaksahahere/cfgcanary/internal/store"
+	"github.com/raunaksahahere/cfgcanary/internal/telemetry"
 	"github.com/raunaksahahere/cfgcanary/internal/validate"
 )
 
@@ -200,6 +202,9 @@ func (s *Server) SubmitVersion(ctx context.Context, req *pb.SubmitVersionRequest
 			module = nil // the pipeline rejects with wasm/unavailable
 		}
 	}
+	vctx, span := telemetry.Tracer().Start(ctx, "validate")
+	span.SetAttributes(attribute.String("cfgcanary.config", req.Name), attribute.Int("cfgcanary.payload_bytes", len(req.Payload)))
+	defer span.End()
 	report := &pb.ValidationReport{}
 	baseList := make([]int64, 0, len(bases))
 	for b := range bases {
@@ -218,13 +223,14 @@ func (s *Server) SubmitVersion(ctx context.Context, req *pb.SubmitVersionRequest
 			}
 			in.Base, in.BaseVersion = bp, b
 		}
-		r := s.validator.Validate(ctx, in)
+		r := s.validator.Validate(vctx, in)
 		if report.StagesRun == nil {
 			report.StagesRun, report.BaseVersion = r.StagesRun, r.BaseVersion
 		}
 		report.Issues = append(report.Issues, r.Issues...)
 	}
 	report.Ok = len(report.Issues) == 0
+	span.SetAttributes(attribute.Bool("cfgcanary.valid", report.Ok), attribute.StringSlice("cfgcanary.stages", report.StagesRun))
 	resp := &pb.SubmitVersionResponse{Report: report}
 	if !report.Ok {
 		s.metrics.submissions.WithLabelValues("rejected", report.Issues[0].Stage).Inc()

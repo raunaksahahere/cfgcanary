@@ -1,0 +1,3 @@
+[
+  {"name": "agents", "listen": "0.0.0.0:18443", "upstream": "server:8443", "enabled": true}
+]

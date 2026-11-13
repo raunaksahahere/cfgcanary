@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -29,6 +30,7 @@ func ts(t time.Time) *timestamppb.Timestamp {
 func (s *Server) GRPCServer(tlsCfg *tls.Config, extra ...grpc.ServerOption) *grpc.Server {
 	opts := append([]grpc.ServerOption{
 		grpc.Creds(credentials.NewTLS(tlsCfg)),
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(auth.UnaryInterceptor(s.cfg.TrustDomain)),
 		grpc.ChainStreamInterceptor(auth.StreamInterceptor(s.cfg.TrustDomain)),
 		grpc.MaxRecvMsgSize(int(s.cfg.HardMaxBytes) + 1<<20),

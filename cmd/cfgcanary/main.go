@@ -25,6 +25,7 @@ import (
 	pb "github.com/raunaksahahere/cfgcanary/api/gen/cfgcanary/v1"
 	"github.com/raunaksahahere/cfgcanary/internal/buildinfo"
 	"github.com/raunaksahahere/cfgcanary/internal/client"
+	"github.com/raunaksahahere/cfgcanary/internal/telemetry"
 )
 
 // Exit codes. Documented in docs/cli.md.
@@ -73,6 +74,10 @@ func env(key, def string) string {
 func main() {
 	root := newRoot()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	v, _, _, _ := buildinfo.Info()
+	if shutdown, err := telemetry.Setup(ctx, "cfgcanary-cli", v); err == nil {
+		defer func() { _ = shutdown(context.Background()) }()
+	}
 	err := root.ExecuteContext(ctx)
 	stop()
 	if err != nil {
@@ -143,7 +148,7 @@ client certificate: --cert/--key/--ca, or --as NAME with a development PKI direc
 		newServerCmd(), newAgentCmd(), newSimCmd(),
 		newConfigsCmd(), newVersionsCmd(), newValidateCmd(), newDiffCmd(), newReleasesCmd(),
 		newKillSwitchCmd(), newUnfreezeCmd(), newTargetCmd(), newInstancesCmd(), newAuditCmd(), newInfoCmd(),
-		newInitCmd(), newDevCmd(), newDoctorCmd(), newVersionCmd(),
+		newInitCmd(), newDevCmd(), newDoctorCmd(), newDemoCmd(), newProbeCmd(), newVersionCmd(),
 	)
 	return root
 }

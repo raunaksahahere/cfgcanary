@@ -16,12 +16,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/otel/attribute"
 
 	pb "github.com/raunaksahahere/cfgcanary/api/gen/cfgcanary/v1"
 	"github.com/raunaksahahere/cfgcanary/internal/gate"
 	"github.com/raunaksahahere/cfgcanary/internal/policy"
 	"github.com/raunaksahahere/cfgcanary/internal/rollout"
 	"github.com/raunaksahahere/cfgcanary/internal/store"
+	"github.com/raunaksahahere/cfgcanary/internal/telemetry"
 )
 
 // Config configures the controller.
@@ -236,7 +238,16 @@ func (c *Controller) finished(ctx context.Context, active map[string]string) {
 	}
 }
 
-func (c *Controller) reconcileOne(ctx context.Context, epoch int64, r *store.ReleaseRow) error {
+func (c *Controller) reconcileOne(ctx context.Context, epoch int64, r *store.ReleaseRow) (err error) {
+	ctx, span := telemetry.Tracer().Start(ctx, "reconcile release")
+	span.SetAttributes(attribute.String("cfgcanary.release", r.ID), attribute.String("cfgcanary.state", string(r.R.State)),
+		attribute.Int("cfgcanary.ring", int(r.R.ActiveRing)), attribute.Int64("cfgcanary.epoch", epoch))
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+		}
+		span.End()
+	}()
 	counts, err := c.store.Counts(ctx, r)
 	if err != nil {
 		return err
@@ -259,7 +270,10 @@ func (c *Controller) reconcileOne(ctx context.Context, epoch int64, r *store.Rel
 		if c.cfg.Prometheus == nil {
 			ev = gate.Evidence{Verdict: gate.Inconclusive, Reason: "no Prometheus configured", Look: req.Look, Looks: int(r.Policy.Gate.Looks)}
 		} else {
-			ev = gate.Evaluate(ctx, c.cfg.Prometheus, req)
+			gctx, gspan := telemetry.Tracer().Start(ctx, "gate evaluate")
+			ev = gate.Evaluate(gctx, c.cfg.Prometheus, req)
+			gspan.SetAttributes(attribute.String("cfgcanary.verdict", string(ev.Verdict)), attribute.Int("cfgcanary.look", req.Look))
+			gspan.End()
 		}
 		raw, _ := json.Marshal(ev)
 		meta := base

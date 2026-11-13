@@ -70,6 +70,12 @@ func (m *metrics) setState(r *store.ReleaseRow) {
 
 func (m *metrics) observe(r *store.ReleaseRow, counts []store.RingCounts, rb rollout.RollbackCounts) {
 	m.setState(r)
+	// Create counters and histograms at zero so the first event is visible
+	// to rate() and increase().
+	m.rollbackSeconds.WithLabelValues(r.Config, r.Env)
+	for _, v := range []string{"PASS", "FAIL", "INCONCLUSIVE"} {
+		m.looks.WithLabelValues(r.Config, r.Env, v).Add(0)
+	}
 	for _, c := range counts {
 		name := strconv.Itoa(int(c.Ring))
 		if c.Ring == ring.Holdout {

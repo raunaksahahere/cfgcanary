@@ -73,7 +73,7 @@ demo: ## Run the secure 50-agent Compose demo end to end
 
 .PHONY: up
 up: ## Start the Compose stack
-	scripts/bootstrap.sh && $(COMPOSE) up -d --build --wait
+	$(COMPOSE) up -d --build --wait
 
 .PHONY: down
 down: ## Stop the Compose stack and remove its volumes

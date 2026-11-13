@@ -168,6 +168,8 @@ func New(cfg Config) (*Agent, error) {
 			}
 		}
 		a.configs[name] = st
+		a.metrics.applies.WithLabelValues(name, "applied").Add(0)
+		a.metrics.stale.WithLabelValues(name).Add(0)
 	}
 	return a, nil
 }

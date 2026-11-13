@@ -68,7 +68,10 @@ release controller at a time (advisory lock plus fencing epoch).`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			var err error
-			if o.DBURL, err = secretFromFile(dbURLFile, "CFGCANARY_DB_URL"); err != nil || o.DBURL == "" {
+			if o.DBURL, err = secretFromFile(dbURLFile, "CFGCANARY_DB_URL"); err != nil {
+				return fail(exitUsage, "reading the database URL: %v", err)
+			}
+			if o.DBURL == "" {
 				return fail(exitUsage, "a database URL is required (--db-url-file or CFGCANARY_DB_URL)")
 			}
 			if o.S3.AccessKey, err = secretFromFile(s3AccessFile, "CFGCANARY_S3_ACCESS_KEY"); err != nil {

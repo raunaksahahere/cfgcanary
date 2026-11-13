@@ -18,3 +18,4 @@ coverage.*
 /bench/logs/
 # Prometheus file_sd targets written by integration tests
 /deploy/compose/testdeps/targets/*.json
+/cfgcanary

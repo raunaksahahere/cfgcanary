@@ -1,0 +1,9 @@
+.git
+.dev
+.agent
+.tools
+bin
+dist
+bench/logs
+**/*.wasm
+deploy/compose/testdeps/targets/*.json

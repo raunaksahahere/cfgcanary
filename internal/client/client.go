@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -60,6 +61,7 @@ func DialWith(o Options, creds credentials.TransportCredentials) (*grpc.ClientCo
 	}
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(creds),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(o.MaxMsgBytes), grpc.MaxCallSendMsgSize(o.MaxMsgBytes)),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: 30 * time.Second, Timeout: 10 * time.Second}),
 	}

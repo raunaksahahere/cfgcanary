@@ -26,6 +26,7 @@ import (
 	"github.com/raunaksahahere/cfgcanary/internal/server"
 	"github.com/raunaksahahere/cfgcanary/internal/sign"
 	"github.com/raunaksahahere/cfgcanary/internal/store"
+	"github.com/raunaksahahere/cfgcanary/internal/telemetry"
 	"github.com/raunaksahahere/cfgcanary/internal/validate"
 )
 
@@ -98,6 +99,12 @@ func RunServer(ctx context.Context, o ServerOptions) error {
 		o.Holder = fmt.Sprintf("%s/%d", h, os.Getpid())
 	}
 
+	version0, _, _, _ := buildinfo.Info()
+	shutdownTracing, err := telemetry.Setup(ctx, "cfgcanary-server", version0)
+	if err != nil {
+		return fmt.Errorf("tracing: %w", err)
+	}
+	defer func() { _ = shutdownTracing(context.Background()) }()
 	tlsMat, err := auth.NewReloader(o.TLSCert, o.TLSKey, o.TLSCA)
 	if err != nil {
 		return fmt.Errorf("server TLS: %w", err)
