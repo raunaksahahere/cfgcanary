@@ -28,13 +28,6 @@ func ts(t time.Time) *timestamppb.Timestamp {
 	return timestamppb.New(t)
 }
 
-func tsp(t *time.Time) *timestamppb.Timestamp {
-	if t == nil {
-		return nil
-	}
-	return timestamppb.New(*t)
-}
-
 // UpsertConfig creates or updates a config's spec and makes sure a target row
 // exists for each of its environments. The WASM module bytes are never stored
 // here; the spec only carries the module digest.

@@ -86,3 +86,15 @@ dist: ## Cross-compile release archives and checksums into dist/
 .PHONY: clean
 clean: ## Remove build output
 	rm -rf bin dist
+
+.PHONY: tools
+tools: ## Install pinned protoc, kind, kubectl and helm into .tools
+	scripts/install-tools.sh && scripts/install-k8s-tools.sh
+
+.PHONY: kind-demo
+kind-demo: tools ## Kubernetes example on kind (install, rollout, upgrade, uninstall)
+	scripts/kind-demo.sh
+
+.PHONY: helm-lint
+helm-lint: ## Lint and render the Helm chart
+	.tools/bin/helm lint deploy/helm/cfgcanary && .tools/bin/helm template t deploy/helm/cfgcanary >/dev/null

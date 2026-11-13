@@ -149,7 +149,7 @@ func newDoctorCmd() *cobra.Command {
 					i, err := c.GetServerInfo(ctx, &pb.GetServerInfoRequest{})
 					cancel()
 					done()
-					detail := g.server
+					var detail string
 					if err == nil {
 						detail = fmt.Sprintf("%s: server %s, you are %s %v", g.server, i.Version, short(i.Identity), i.Roles)
 					} else {

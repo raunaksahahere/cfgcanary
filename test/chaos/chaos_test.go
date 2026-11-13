@@ -16,7 +16,6 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	pb "github.com/raunaksahahere/cfgcanary/api/gen/cfgcanary/v1"
-	"github.com/raunaksahahere/cfgcanary/internal/app"
 	"github.com/raunaksahahere/cfgcanary/internal/server"
 	"github.com/raunaksahahere/cfgcanary/internal/store"
 	"github.com/raunaksahahere/cfgcanary/internal/testenv"
@@ -36,15 +35,6 @@ func seed(t *testing.T, c pb.ControlServiceClient, rings int32) int64 {
 	v1 := testenv.MustVersion(t, c, "ratelimits", payload(t, "v1-baseline.json"))
 	testenv.PromoteThrough(t, c, testenv.Create(t, c, "ratelimits", v1), rings)
 	return v1
-}
-
-func leaderOf(rs ...*app.Running) (int, int64) {
-	for i, r := range rs {
-		if ok, ep := r.Controller.Leader(); ok {
-			return i, ep
-		}
-	}
-	return -1, 0
 }
 
 // The leader dies in the middle of a rollout; a replica takes over with a
@@ -146,7 +136,7 @@ func TestPartitionDuringRollback(t *testing.T) {
 	}
 	tu.Must(t, px.Enable(), "heal")
 	tu.Eventually(t, 60*time.Second, "partitioned agents converge", func() bool { return len(f2.Served(v1)) == 5 })
-	r = testenv.WaitRelease(t, admin, id, 30*time.Second, "converged", func(r *pb.Release) bool { return r.Rollback.Converged })
+	testenv.WaitRelease(t, admin, id, 30*time.Second, "converged", func(r *pb.Release) bool { return r.Rollback.Converged })
 }
 
 // A client that stops reading does not hold up anyone else: updates are

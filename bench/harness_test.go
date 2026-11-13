@@ -11,7 +11,6 @@ package bench
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -172,12 +171,6 @@ func (h *harness) metrics() map[string]float64 {
 		}
 	}
 	return out
-}
-
-func (h *harness) ctx() context.Context {
-	c, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	h.t.Cleanup(cancel)
-	return c
 }
 
 // --- statistics and output --------------------------------------------------------

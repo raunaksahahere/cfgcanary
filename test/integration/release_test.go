@@ -72,8 +72,8 @@ func TestManualReleaseThroughEveryRing(t *testing.T) {
 			// bake may already have elapsed on a slow machine; that is fine
 		}
 	}
-	r := promoteThrough(t, admin, id, 3)
-	r = waitRelease(t, admin, id, time.Minute, "complete", func(r *pb.Release) bool { return r.State == pb.ReleaseState_RELEASE_STATE_COMPLETE })
+	promoteThrough(t, admin, id, 3)
+	waitRelease(t, admin, id, time.Minute, "complete", func(r *pb.Release) bool { return r.State == pb.ReleaseState_RELEASE_STATE_COMPLETE })
 	testutil.Eventually(t, 30*time.Second, "all instances on v1", func() bool { return len(fleet.Served(v1)) == 20 })
 	tgt, _ := admin.GetTarget(ctx(t), &pb.GetTargetRequest{Config: "ratelimits", Environment: "prod"})
 	if tgt.BaselineVersion != v1 || tgt.CandidateVersion != 0 {
@@ -100,11 +100,10 @@ func TestManualReleaseThroughEveryRing(t *testing.T) {
 	}
 	e.StartServer()
 	admin = e.Control("users/admin")
-	r = waitRelease(t, admin, id, 30*time.Second, "release survives restart", func(r *pb.Release) bool { return r.Paused && r.ActiveRing == 0 })
+	waitRelease(t, admin, id, 30*time.Second, "release survives restart", func(r *pb.Release) bool { return r.Paused && r.ActiveRing == 0 })
 	_, err = admin.ResumeRelease(ctx(t), &pb.ReleaseCommandRequest{Id: id})
 	testutil.Must(t, err, "resume")
 	promoteThrough(t, admin, id, 3)
 	waitRelease(t, admin, id, time.Minute, "v2 complete", func(r *pb.Release) bool { return r.State == pb.ReleaseState_RELEASE_STATE_COMPLETE })
 	testutil.Eventually(t, 30*time.Second, "all instances on v2", func() bool { return len(fleet.Served(v2)) == 20 })
-	_ = r
 }

@@ -2,6 +2,7 @@ package bench
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -174,7 +175,7 @@ func reloaderModel(n int, crashes bool) BlastResult {
 			"pods keep crash-looping (no last-known-good)"
 	} else {
 		r.Targeted, r.AgentApplied, r.SDKAccepted, r.Affected = n, n, n, n
-		r.Notes = "runtime-harmful but startable config: passes readiness, every batch restarts onto it in ~4 x 15 s = 60 s; nothing compares error rates"
+		r.Notes = "runtime-harmful but startable config: passes readiness, every batch restarts onto it in ~4 x " + fmt.Sprint(restartSeconds) + " s; nothing compares error rates"
 	}
 	return r
 }
