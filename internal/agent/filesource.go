@@ -88,7 +88,7 @@ func (a *Agent) reportConnLoop(ctx context.Context) {
 			client := pb.NewConfigServiceClient(conn)
 			// Probe once so a broken connection is detected.
 			pctx, pcancel := context.WithTimeout(ctx, 10*time.Second)
-			_, err = client.GetDesired(pctx, &pb.GetDesiredRequest{InstanceId: a.cfg.InstanceID})
+			_, err = client.GetDesired(pctx, &pb.GetDesiredRequest{InstanceId: a.cfg.InstanceID, Subscriptions: a.subscriptions()})
 			pcancel()
 			if err == nil {
 				attempt = 0
@@ -102,7 +102,7 @@ func (a *Agent) reportConnLoop(ctx context.Context) {
 						err = ctx.Err()
 					case <-t.C:
 						pctx, pcancel := context.WithTimeout(ctx, 10*time.Second)
-						_, err = client.GetDesired(pctx, &pb.GetDesiredRequest{InstanceId: a.cfg.InstanceID})
+						_, err = client.GetDesired(pctx, &pb.GetDesiredRequest{InstanceId: a.cfg.InstanceID, Subscriptions: a.subscriptions()})
 						pcancel()
 						if err == nil {
 							a.contact()

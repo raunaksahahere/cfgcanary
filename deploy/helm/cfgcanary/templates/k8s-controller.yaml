@@ -1,0 +1,100 @@
+{{- if .Values.k8sController.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "cfgcanary.fullname" . }}-k8s-controller
+  labels: {{- include "cfgcanary.labels" . | nindent 4 }}
+---
+# Least privilege: read ConfigReleases and write their status, manage the ring
+# ConfigMaps it projects, read payload ConfigMaps, and hold its Lease.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cfgcanary.fullname" . }}-k8s-controller
+  labels: {{- include "cfgcanary.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [cfgcanary.io]
+    resources: [configreleases]
+    verbs: [get, list, watch]
+  - apiGroups: [cfgcanary.io]
+    resources: [configreleases/status]
+    verbs: [get, update, patch]
+  - apiGroups: [""]
+    resources: [configmaps]
+    verbs: [get, list, watch, create, update]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "cfgcanary.fullname" . }}-k8s-controller
+  labels: {{- include "cfgcanary.labels" . | nindent 4 }}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: {{ include "cfgcanary.fullname" . }}-k8s-controller}
+subjects:
+  - {kind: ServiceAccount, name: {{ include "cfgcanary.fullname" . }}-k8s-controller, namespace: {{ .Release.Namespace }}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "cfgcanary.fullname" . }}-k8s-controller-lease
+  labels: {{- include "cfgcanary.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [coordination.k8s.io]
+    resources: [leases]
+    verbs: [get, create, update]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "cfgcanary.fullname" . }}-k8s-controller-lease
+  labels: {{- include "cfgcanary.labels" . | nindent 4 }}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: {{ include "cfgcanary.fullname" . }}-k8s-controller-lease}
+subjects:
+  - {kind: ServiceAccount, name: {{ include "cfgcanary.fullname" . }}-k8s-controller, namespace: {{ .Release.Namespace }}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cfgcanary.fullname" . }}-k8s-controller
+  labels: {{- include "cfgcanary.labels" . | nindent 4 }}
+    app.kubernetes.io/component: k8s-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/instance: {{ .Release.Name }}, app.kubernetes.io/component: k8s-controller}
+  template:
+    metadata:
+      labels: {{- include "cfgcanary.labels" . | nindent 8 }}
+        app.kubernetes.io/component: k8s-controller
+    spec:
+      serviceAccountName: {{ include "cfgcanary.fullname" . }}-k8s-controller
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: controller
+          image: {{ include "cfgcanary.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - k8s-controller
+            - --server={{ include "cfgcanary.fullname" . }}:{{ .Values.server.service.grpcPort }}
+            - --server-name={{ include "cfgcanary.fullname" . }}
+            - --cert=/secrets/client/tls.crt
+            - --key=/secrets/client/tls.key
+            - --ca=/secrets/client/ca.crt
+            - --namespace={{ .Values.k8sController.watchNamespace }}
+          env:
+            - name: POD_NAMESPACE
+              valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
+          ports:
+            - {name: health, containerPort: 8081}
+          livenessProbe:
+            httpGet: {path: /healthz, port: health}
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: {path: /healthz, port: health}
+            periodSeconds: 5
+          resources: {{- toYaml .Values.k8sController.resources | nindent 12 }}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          volumeMounts:
+            - {name: client, mountPath: /secrets/client, readOnly: true}
+      volumes:
+        - {name: client, secret: {secretName: {{ .Values.k8sController.clientSecret }}}}
+{{- end }}

@@ -72,11 +72,13 @@ type Member struct {
 	// versions records when each version was first served.
 	accepted map[int64]time.Time
 	versions map[int64]time.Time
-	cancel   context.CancelFunc
-	done     chan struct{}
-	dial     func(ctx context.Context) (*grpc.ClientConn, error)
-	opt      *Options
-	rng      *rand.Rand
+	// history records every change of served version (bounded).
+	history []VersionChange
+	cancel  context.CancelFunc
+	done    chan struct{}
+	dial    func(ctx context.Context) (*grpc.ClientConn, error)
+	opt     *Options
+	rng     *rand.Rand
 }
 
 // Fleet is a set of members.
@@ -192,14 +194,42 @@ func (m *Member) Info() (sdk.Info, bool) {
 	return c.Info(), true
 }
 
+// VersionChange is one change of the served version.
+type VersionChange struct {
+	At         time.Time
+	Version    int64
+	Generation int64
+}
+
 func (m *Member) record(i sdk.Info) {
 	now := time.Now()
+	if n := len(m.history); n == 0 || m.history[n-1].Version != i.Version {
+		if n >= 256 {
+			m.history = m.history[1:]
+		}
+		m.history = append(m.history, VersionChange{At: now, Version: i.Version, Generation: i.Generation})
+	}
 	if _, ok := m.accepted[i.Generation]; !ok {
 		m.accepted[i.Generation] = now
 	}
 	if _, ok := m.versions[i.Version]; !ok {
 		m.versions[i.Version] = now
 	}
+}
+
+// History returns the member's version changes.
+func (m *Member) History() []VersionChange {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return append([]VersionChange(nil), m.history...)
+}
+
+// FirstServedAt returns when the member first served a version.
+func (m *Member) FirstServedAt(version int64) (time.Time, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	t, ok := m.versions[version]
+	return t, ok
 }
 
 // EverServed reports whether the member's application ever served a version.

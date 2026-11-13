@@ -175,3 +175,18 @@ func TestGuardMetric(t *testing.T) {
 		t.Fatalf("5-instance restart evidence passed: %+v", r)
 	}
 }
+
+// Degradation inside the tolerated margin is not a rollback; beyond it is.
+func TestThreeZones(t *testing.T) {
+	rng := rand.New(rand.NewPCG(21, 21))
+	big := func(m int, p float64) []Sample { return cohort(m, 5000, p, rng) }
+	if r := EvaluateMetric(spec, big(40, 0.015), big(80, 0.01), params); r.Verdict != Pass {
+		t.Fatalf("0.5pp inside a 2pp margin with lots of data: %+v", r)
+	}
+	if r := EvaluateMetric(spec, big(40, 0.06), big(80, 0.01), params); r.Verdict != Fail {
+		t.Fatalf("5pp beyond a 2pp margin: %+v", r)
+	}
+	if r := EvaluateMetric(spec, cohort(10, 300, 0.03, rng), cohort(20, 300, 0.01, rng), params); r.Verdict == Pass {
+		t.Fatalf("at the margin with modest data: %+v", r)
+	}
+}

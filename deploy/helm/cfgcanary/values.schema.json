@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["image", "server", "k8sController"],
+  "properties": {
+    "image": {
+      "type": "object",
+      "required": ["repository"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "tag": {"type": "string"},
+        "pullPolicy": {"enum": ["Always", "IfNotPresent", "Never"]}
+      }
+    },
+    "trustDomain": {"type": "string", "minLength": 1},
+    "server": {
+      "type": "object",
+      "required": ["tlsSecret", "signingKeysSecret", "rbacSecret", "database", "objectStore"],
+      "properties": {
+        "replicas": {"type": "integer", "minimum": 1},
+        "tlsSecret": {"type": "string", "minLength": 1},
+        "signingKeysSecret": {"type": "string", "minLength": 1},
+        "rbacSecret": {"type": "string", "minLength": 1},
+        "database": {
+          "type": "object",
+          "required": ["urlSecret"],
+          "properties": {"urlSecret": {"type": "string", "minLength": 1}, "maxConns": {"type": "integer", "minimum": 2}}
+        },
+        "objectStore": {
+          "type": "object",
+          "required": ["endpoint", "bucket", "credentialsSecret"],
+          "properties": {
+            "endpoint": {"type": "string", "minLength": 1},
+            "publicEndpoint": {"type": "string"},
+            "bucket": {"type": "string", "minLength": 3},
+            "region": {"type": "string"},
+            "tls": {"type": "boolean"},
+            "credentialsSecret": {"type": "string", "minLength": 1}
+          }
+        },
+        "prometheusUrl": {"type": "string"},
+        "maxPayloadBytes": {"type": "integer", "minimum": 1024},
+        "admission": {"type": "object", "properties": {"rate": {"type": "number", "exclusiveMinimum": 0}, "burst": {"type": "integer", "minimum": 1}}},
+        "membershipWindow": {"type": "string", "pattern": "^[0-9]+(s|m|h)$"},
+        "service": {"type": "object"},
+        "resources": {"type": "object"},
+        "extraEnv": {"type": "array"}
+      }
+    },
+    "k8sController": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "watchNamespace": {"type": "string"},
+        "clientSecret": {"type": "string"},
+        "resources": {"type": "object"}
+      },
+      "if": {"properties": {"enabled": {"const": true}}},
+      "then": {"required": ["clientSecret"], "properties": {"clientSecret": {"minLength": 1}}}
+    }
+  }
+}

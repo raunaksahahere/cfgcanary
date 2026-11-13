@@ -22,7 +22,9 @@ func (s *Store) UpsertInstance(ctx context.Context, env, id, group string, label
 	_, err = s.Pool.Exec(ctx, `INSERT INTO instances (environment, instance_id, grp, labels, agent_version)
 		VALUES ($1,$2,$3,$4,$5)
 		ON CONFLICT (environment, instance_id) DO UPDATE
-		SET grp = EXCLUDED.grp, labels = EXCLUDED.labels, agent_version = EXCLUDED.agent_version, last_seen = now()`,
+		SET grp = EXCLUDED.grp,
+		    labels = CASE WHEN EXCLUDED.labels = '{}'::jsonb THEN instances.labels ELSE EXCLUDED.labels END,
+		    agent_version = COALESCE(NULLIF(EXCLUDED.agent_version, ''), instances.agent_version), last_seen = now()`,
 		env, id, group, lj, truncate(agentVersion, 64))
 	return err
 }

@@ -1,0 +1,14 @@
+cfgcanary {{ .Chart.AppVersion }} is installed in namespace {{ .Release.Namespace }}.
+
+Control plane (gRPC, mTLS): {{ include "cfgcanary.fullname" . }}.{{ .Release.Namespace }}:{{ .Values.server.service.grpcPort }}
+REST gateway (mTLS):        {{ include "cfgcanary.fullname" . }}.{{ .Release.Namespace }}:{{ .Values.server.service.restPort }}
+Metrics and health:         {{ include "cfgcanary.fullname" . }}.{{ .Release.Namespace }}:9464
+
+From a workstation:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "cfgcanary.fullname" . }} 8443:{{ .Values.server.service.grpcPort }}
+  cfgcanary --server localhost:8443 --server-name {{ include "cfgcanary.fullname" . }} --cert ... --key ... --ca ... info
+{{- if .Values.k8sController.enabled }}
+
+ConfigRelease controller: running. kubectl get configreleases -A
+Ring ConfigMaps are named <config>-<environment>-ring-<n> in each ConfigRelease's namespace.
+{{- end }}

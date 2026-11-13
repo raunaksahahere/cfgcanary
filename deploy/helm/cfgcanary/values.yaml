@@ -1,0 +1,65 @@
+# Default values for cfgcanary. Credentials are never set here: every secret is
+# referenced by name and must exist in the release namespace.
+image:
+  repository: ghcr.io/raunaksahahere/cfgcanary
+  tag: ""          # defaults to the chart appVersion
+  pullPolicy: IfNotPresent
+
+trustDomain: cfgcanary.local
+
+server:
+  replicas: 1      # replicas share PostgreSQL; exactly one leads the release controller
+  # Secret with tls.crt, tls.key and ca.crt. The certificate must carry the
+  # Service DNS name (default "cfgcanary") and serverAuth+clientAuth usages.
+  tlsSecret: cfgcanary-server-tls
+  # Secret with artifact.key and delivery.key (ed25519 seeds, base64).
+  signingKeysSecret: cfgcanary-signing-keys
+  # Secret with rbac.yaml (subjects -> roles).
+  rbacSecret: cfgcanary-rbac
+  database:
+    # Secret with a "url" key: postgres://user:password@host:5432/db
+    urlSecret: cfgcanary-db
+    maxConns: 30
+  objectStore:
+    endpoint: minio:9000
+    publicEndpoint: ""   # host:port agents download from, if different
+    bucket: cfgcanary
+    region: us-east-1
+    tls: false
+    # Secret with access-key and secret-key.
+    credentialsSecret: cfgcanary-s3
+  prometheusUrl: ""      # empty: gated looks are inconclusive and releases halt
+  maxPayloadBytes: 4194304
+  admission: {rate: 500, burst: 1000}
+  membershipWindow: 2m
+  service:
+    type: ClusterIP
+    grpcPort: 8443
+    restPort: 8444
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {memory: 512Mi}
+  extraEnv: []
+
+k8sController:
+  enabled: true
+  watchNamespace: ""     # empty: all namespaces
+  # Secret with tls.crt, tls.key and ca.crt for a service identity with the
+  # releaser role, e.g. spiffe://cfgcanary.local/service/k8s-controller.
+  clientSecret: cfgcanary-k8s-controller
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 256Mi}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  seccompProfile: {type: RuntimeDefault}
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities: {drop: [ALL]}
+nodeSelector: {}
+tolerations: []
+affinity: {}

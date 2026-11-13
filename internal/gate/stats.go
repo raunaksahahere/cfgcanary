@@ -4,8 +4,9 @@
 // histogram bucket boundary, instances that restarted). At each of K
 // predeclared looks, two one-sided tests run per metric:
 //
-//   - harm: H0 "canary is no worse than control" (p_c - p_k <= 0). Rejecting
-//     it is evidence of degradation -> FAIL.
+//   - harm: H0 "canary is not worse than the tolerated degradation"
+//     (p_c - p_k <= margin; <= 0 for guard metrics). Rejecting it is evidence
+//     of degradation beyond the tolerance -> FAIL.
 //   - non-inferiority: H0 "canary is worse by at least the margin"
 //     (p_c - p_k >= margin). Rejecting it for every metric is evidence the
 //     canary is within the tolerated degradation -> PASS.
@@ -133,6 +134,10 @@ func tQuantile(p, df float64) float64 {
 // constraint p1 - p2 = delta, for x1/n1 and x2/n2 binomial observations
 // (Farrington & Manning 1990; Miettinen & Nurminen 1985 closed form).
 func RestrictedMLE(x1, n1, x2, n2, delta float64) (float64, float64) {
+	if delta == 0 {
+		p := (x1 + x2) / (n1 + n2)
+		return p, p
+	}
 	p1, p2 := x1/n1, x2/n2
 	theta := n2 / n1
 	a := 1 + theta
@@ -211,18 +216,26 @@ func EvaluateMetric(spec MetricSpec, canary, control []Sample, p Params) MetricR
 	r.CritNonInf = tQuantile(1-p.AlphaNonInferiority/looks, r.DF)
 	diff := c.p - k.p
 
-	// Harm test. Observed variances vanish at the boundaries (all or no
-	// events), so the pooled variance under H0 (p_c = p_k) is a floor: the
-	// score-test form, which cannot report "no harm" merely because the
-	// cohorts are degenerate.
-	pooled := (c.bad + k.bad) / (c.n + k.n)
-	v0 := pooled * (1 - pooled) * (1/c.n + 1/k.n)
+	// Harm test: H0 "the canary is not worse than the tolerated
+	// degradation" (p_c - p_k <= h). For evidence metrics h is the margin, so
+	// degradation inside the tolerance is not a reason to roll back (it can
+	// still fail to show non-inferiority and halt); for guard metrics h is 0,
+	// so any demonstrated increase fails. The variance is the larger of the
+	// observed (binomial or cluster) variance and the restricted-MLE variance
+	// at the null boundary, which stays positive when cohorts are degenerate
+	// (no events, or all events).
+	h := spec.Margin
+	if spec.Guard {
+		h = 0
+	}
+	b1, b2 := RestrictedMLE(c.bad, c.n, k.bad, k.n, h)
+	v0 := b1*(1-b1)/c.n + b2*(1-b2)/k.n
 	vh := math.Max(math.Max(c.vBinom, c.vClust)+math.Max(k.vBinom, k.vClust), v0)
 	if vh > 0 {
-		r.ZHarm = diff / math.Sqrt(vh)
+		r.ZHarm = (diff - h) / math.Sqrt(vh)
 	}
 	if r.ZHarm > r.CritHarm {
-		r.Verdict, r.Reason = Fail, fmt.Sprintf("canary is worse than control: %.4f vs %.4f (z=%.2f > %.2f)", c.p, k.p, r.ZHarm, r.CritHarm)
+		r.Verdict, r.Reason = Fail, fmt.Sprintf("canary is worse than control beyond the tolerated %.4f: %.4f vs %.4f (z=%.2f > %.2f)", h, c.p, k.p, r.ZHarm, r.CritHarm)
 		return r
 	}
 	if spec.Guard {

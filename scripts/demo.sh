@@ -51,7 +51,7 @@ step "kill switch while every agent is partitioned from the control plane"
 echo "link between agents and control plane: cut (Toxiproxy)"
 as oncall kill-switch ratelimits --reason "demo: emergency revert during a partition"
 sleep 35   # longer than the policy's 30s reachable window
-id=$(as viewer -o json releases list --config ratelimits | sed -n 's/.*"id": "\(rel-[0-9a-f]*\)".*/\1/p' | head -1)
+id=$(as viewer -o json releases list --config ratelimits | sed -n 's/.*"id": "\(rel-[0-9a-f]*\)".*/\1/p' | sed -n 1p)
 echo "while partitioned:"
 as viewer releases status "$id" | grep -E '^(state|rollback|unreachable)' || true
 "${COMPOSE[@]}" exec -T toxiproxy /toxiproxy-cli toggle agents >/dev/null

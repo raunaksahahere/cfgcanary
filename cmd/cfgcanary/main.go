@@ -145,7 +145,7 @@ client certificate: --cert/--key/--ca, or --as NAME with a development PKI direc
 	root.SetVersionTemplate("{{.Version}}\n")
 
 	root.AddCommand(
-		newServerCmd(), newAgentCmd(), newSimCmd(),
+		newServerCmd(), newAgentCmd(), newSimCmd(), newDemoAppCmd(), newK8sControllerCmd(),
 		newConfigsCmd(), newVersionsCmd(), newValidateCmd(), newDiffCmd(), newReleasesCmd(),
 		newKillSwitchCmd(), newUnfreezeCmd(), newTargetCmd(), newInstancesCmd(), newAuditCmd(), newInfoCmd(),
 		newInitCmd(), newDevCmd(), newDoctorCmd(), newDemoCmd(), newProbeCmd(), newVersionCmd(),

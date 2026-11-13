@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -103,7 +104,7 @@ Grafana credentials (one file per secret under secrets/). Existing files are kep
 	boot.Flags().StringVar(&dir, "dir", ".dev", "output directory")
 	boot.Flags().BoolVar(&shared, "shared", false, "make the directory readable by other users (a volume shared with non-root containers)")
 	boot.Flags().StringVar(&dbHost, "db-host", "postgres:5432", "PostgreSQL host:port written into secrets/db-url")
-	cmd.AddCommand(boot)
+	cmd.AddCommand(boot, newDevIssueCmd())
 	return cmd
 }
 
@@ -163,4 +164,34 @@ func newDoctorCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func newDevIssueCmd() *cobra.Command {
+	var uri, out, name string
+	var days int
+	cmd := &cobra.Command{
+		Use:   "issue",
+		Short: "Issue a client certificate from the development CA (for agents, groups or services)",
+		Example: `  cfgcanary dev issue --uri spiffe://cfgcanary.local/env/prod/group/ring1 --out .dev/pki/groups --name ring1
+  cfgcanary dev issue --uri spiffe://cfgcanary.local/env/prod/agent/host-17 --out certs --name host-17`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			ca, err := devpki.LoadCA(g.pkiDir)
+			if err != nil {
+				return fail(exitUsage, "development CA not found in %s: %v", g.pkiDir, err)
+			}
+			if err := ca.WriteIssued(out, name, devpki.Spec{CommonName: name, URI: uri, Client: true,
+				NotAfter: time.Now().Add(time.Duration(days) * 24 * time.Hour)}); err != nil {
+				return err
+			}
+			printf("wrote %s/%s.pem and %s-key.pem for %s\n", out, name, name, uri)
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&uri, "uri", "", "SPIFFE ID")
+	cmd.Flags().StringVar(&out, "out", ".", "output directory")
+	cmd.Flags().StringVar(&name, "name", "client", "file base name")
+	cmd.Flags().IntVar(&days, "days", 90, "validity in days")
+	_ = cmd.MarkFlagRequired("uri")
+	return cmd
 }

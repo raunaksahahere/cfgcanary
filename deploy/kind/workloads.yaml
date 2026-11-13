@@ -1,0 +1,206 @@
+# Sample workloads for the kind example: one Deployment per ring.
+# Rings are assigned by the pod's group certificate, pinned in spec-k8s.yaml.
+apiVersion: v1
+kind: Namespace
+metadata: {name: demo}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-ring0
+  namespace: demo
+  labels: {app: demo, cfgcanary.io/group: ring0}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: demo, cfgcanary.io/group: ring0}}
+  template:
+    metadata:
+      labels: {app: demo, cfgcanary.io/group: ring0}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 65532, runAsGroup: 65532, fsGroup: 65532, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: agent
+          image: cfgcanary:dev
+          imagePullPolicy: IfNotPresent
+          args:
+            - agent
+            - --source-dir=/source
+            - --cache-dir=/cache
+            - --config=ratelimits
+            - --environment=prod
+            - --trust-bundle=/trust/trust.json
+            - --server=cfgcanary.cfgcanary.svc:8443
+            - --server-name=cfgcanary
+            - --cert=/group/tls.crt
+            - --key=/group/tls.key
+            - --ca=/group/ca.crt
+            - --reconcile-interval=5s
+          env:
+            - name: POD_NAME
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            # The group certificate may only claim instance IDs "ring0/<suffix>".
+            - {name: CFGCANARY_INSTANCE, value: "ring0/$(POD_NAME)"}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 10m, memory: 32Mi}, limits: {memory: 128Mi}}
+          volumeMounts:
+            - {name: source, mountPath: /source, readOnly: true}
+            - {name: cache, mountPath: /cache}
+            - {name: trust, mountPath: /trust, readOnly: true}
+            - {name: group, mountPath: /group, readOnly: true}
+        - name: app
+          image: cfgcanary:dev
+          imagePullPolicy: IfNotPresent
+          args: [demo-app, --cache-dir=/cache, --config=ratelimits, --environment=prod, --trust-bundle=/trust/trust.json, --listen=:8080]
+          env:
+            - name: POD_NAME
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            - {name: CFGCANARY_INSTANCE, value: "ring0/$(POD_NAME)"}
+          ports: [{name: http, containerPort: 8080}]
+          # Not ready until the SDK has published a verified config.
+          readinessProbe: {httpGet: {path: /readyz, port: http}, periodSeconds: 2}
+          livenessProbe: {httpGet: {path: /healthz, port: http}, periodSeconds: 10}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 10m, memory: 32Mi}, limits: {memory: 128Mi}}
+          volumeMounts:
+            - {name: cache, mountPath: /cache}
+            - {name: trust, mountPath: /trust, readOnly: true}
+      volumes:
+        # Optional so pods can start before the controller first projects it.
+        - {name: source, configMap: {name: ratelimits-prod-ring-0, optional: true}}
+        - {name: cache, emptyDir: {}}
+        - {name: trust, configMap: {name: cfgcanary-trust}}
+        - {name: group, secret: {secretName: cfgcanary-group-ring0}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-ring1
+  namespace: demo
+  labels: {app: demo, cfgcanary.io/group: ring1}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: demo, cfgcanary.io/group: ring1}}
+  template:
+    metadata:
+      labels: {app: demo, cfgcanary.io/group: ring1}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 65532, runAsGroup: 65532, fsGroup: 65532, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: agent
+          image: cfgcanary:dev
+          imagePullPolicy: IfNotPresent
+          args:
+            - agent
+            - --source-dir=/source
+            - --cache-dir=/cache
+            - --config=ratelimits
+            - --environment=prod
+            - --trust-bundle=/trust/trust.json
+            - --server=cfgcanary.cfgcanary.svc:8443
+            - --server-name=cfgcanary
+            - --cert=/group/tls.crt
+            - --key=/group/tls.key
+            - --ca=/group/ca.crt
+            - --reconcile-interval=5s
+          env:
+            - name: POD_NAME
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            # The group certificate may only claim instance IDs "ring1/<suffix>".
+            - {name: CFGCANARY_INSTANCE, value: "ring1/$(POD_NAME)"}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 10m, memory: 32Mi}, limits: {memory: 128Mi}}
+          volumeMounts:
+            - {name: source, mountPath: /source, readOnly: true}
+            - {name: cache, mountPath: /cache}
+            - {name: trust, mountPath: /trust, readOnly: true}
+            - {name: group, mountPath: /group, readOnly: true}
+        - name: app
+          image: cfgcanary:dev
+          imagePullPolicy: IfNotPresent
+          args: [demo-app, --cache-dir=/cache, --config=ratelimits, --environment=prod, --trust-bundle=/trust/trust.json, --listen=:8080]
+          env:
+            - name: POD_NAME
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            - {name: CFGCANARY_INSTANCE, value: "ring1/$(POD_NAME)"}
+          ports: [{name: http, containerPort: 8080}]
+          # Not ready until the SDK has published a verified config.
+          readinessProbe: {httpGet: {path: /readyz, port: http}, periodSeconds: 2}
+          livenessProbe: {httpGet: {path: /healthz, port: http}, periodSeconds: 10}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 10m, memory: 32Mi}, limits: {memory: 128Mi}}
+          volumeMounts:
+            - {name: cache, mountPath: /cache}
+            - {name: trust, mountPath: /trust, readOnly: true}
+      volumes:
+        # Optional so pods can start before the controller first projects it.
+        - {name: source, configMap: {name: ratelimits-prod-ring-1, optional: true}}
+        - {name: cache, emptyDir: {}}
+        - {name: trust, configMap: {name: cfgcanary-trust}}
+        - {name: group, secret: {secretName: cfgcanary-group-ring1}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-ring2
+  namespace: demo
+  labels: {app: demo, cfgcanary.io/group: ring2}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: demo, cfgcanary.io/group: ring2}}
+  template:
+    metadata:
+      labels: {app: demo, cfgcanary.io/group: ring2}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 65532, runAsGroup: 65532, fsGroup: 65532, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: agent
+          image: cfgcanary:dev
+          imagePullPolicy: IfNotPresent
+          args:
+            - agent
+            - --source-dir=/source
+            - --cache-dir=/cache
+            - --config=ratelimits
+            - --environment=prod
+            - --trust-bundle=/trust/trust.json
+            - --server=cfgcanary.cfgcanary.svc:8443
+            - --server-name=cfgcanary
+            - --cert=/group/tls.crt
+            - --key=/group/tls.key
+            - --ca=/group/ca.crt
+            - --reconcile-interval=5s
+          env:
+            - name: POD_NAME
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            # The group certificate may only claim instance IDs "ring2/<suffix>".
+            - {name: CFGCANARY_INSTANCE, value: "ring2/$(POD_NAME)"}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 10m, memory: 32Mi}, limits: {memory: 128Mi}}
+          volumeMounts:
+            - {name: source, mountPath: /source, readOnly: true}
+            - {name: cache, mountPath: /cache}
+            - {name: trust, mountPath: /trust, readOnly: true}
+            - {name: group, mountPath: /group, readOnly: true}
+        - name: app
+          image: cfgcanary:dev
+          imagePullPolicy: IfNotPresent
+          args: [demo-app, --cache-dir=/cache, --config=ratelimits, --environment=prod, --trust-bundle=/trust/trust.json, --listen=:8080]
+          env:
+            - name: POD_NAME
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            - {name: CFGCANARY_INSTANCE, value: "ring2/$(POD_NAME)"}
+          ports: [{name: http, containerPort: 8080}]
+          # Not ready until the SDK has published a verified config.
+          readinessProbe: {httpGet: {path: /readyz, port: http}, periodSeconds: 2}
+          livenessProbe: {httpGet: {path: /healthz, port: http}, periodSeconds: 10}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 10m, memory: 32Mi}, limits: {memory: 128Mi}}
+          volumeMounts:
+            - {name: cache, mountPath: /cache}
+            - {name: trust, mountPath: /trust, readOnly: true}
+      volumes:
+        # Optional so pods can start before the controller first projects it.
+        - {name: source, configMap: {name: ratelimits-prod-ring-2, optional: true}}
+        - {name: cache, emptyDir: {}}
+        - {name: trust, configMap: {name: cfgcanary-trust}}
+        - {name: group, secret: {secretName: cfgcanary-group-ring2}}

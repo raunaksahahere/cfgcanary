@@ -1,0 +1,46 @@
+# Kubernetes demo policy: workloads are assigned to rings by their group
+# certificate (spiffe://cfgcanary.local/env/prod/group/ringN), pinned below.
+# Promotion is manual (no Prometheus in the kind example).
+# The demo config: per-route rate limits, feature rules and a dependency timeout
+# for a "checkout" service. Register with:
+#   cfgcanary configs register -f examples/ratelimits/spec.yaml
+# (build the WASM validator first: make wasm)
+name: ratelimits
+description: Rate limits, feature rules and dependency timeout for the checkout service
+format: json
+failure_mode: FAILURE_MODE_FAIL_STATIC
+max_staleness: 600s
+retain_versions: 20
+validation:
+  limits:
+    max_bytes: 65536            # hard ceiling before anything is parsed
+    max_depth: 16
+    max_items:
+      /features: 200            # the consumer preallocates 200 slots
+      /limits: 100
+  json_schema_file: schema.json
+  cue_file: policy.cue
+  relative:
+    max_size_ratio: 2           # block a file that suddenly doubles
+    max_items_ratio: {"/features": 2}
+    min_items_ratio: {"/features": 0.5}
+  wasm:
+    module_file: validator.wasm # the consumer's own parser, sandboxed
+    timeout: 2s
+    memory_limit_mib: 32
+environments:
+  prod:
+    rings:
+      - {name: ring0, cumulative_bps: 1000}
+      - {name: ring1, cumulative_bps: 5000}
+      - {name: ring2, cumulative_bps: 10000}
+    pinned_groups: {ring0: 0, ring1: 1, ring2: 2}
+    min_instances: 1
+    acceptance_threshold: 1
+    min_reachable_fraction: 0.5
+    reachable_window: 60s
+    rollout_timeout: 300s
+    promotion: PROMOTION_MANUAL
+    gate:
+      mode: GATE_MODE_NONE
+      min_bake: 10s

@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cfgcanary.fullname" . }}
+  labels: {{- include "cfgcanary.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+spec:
+  replicas: {{ .Values.server.replicas }}
+  selector:
+    matchLabels: {app.kubernetes.io/instance: {{ .Release.Name }}, app.kubernetes.io/component: server}
+  template:
+    metadata:
+      labels: {{- include "cfgcanary.labels" . | nindent 8 }}
+        app.kubernetes.io/component: server
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9464"
+    spec:
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: server
+          image: {{ include "cfgcanary.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["server"]
+          env:
+            - {name: CFGCANARY_LISTEN, value: ":8443"}
+            - {name: CFGCANARY_REST_LISTEN, value: ":8444"}
+            - {name: CFGCANARY_METRICS_LISTEN, value: ":9464"}
+            - {name: CFGCANARY_TRUST_DOMAIN, value: {{ .Values.trustDomain | quote }}}
+            - {name: CFGCANARY_DB_URL_FILE, value: /secrets/db/url}
+            - {name: CFGCANARY_DB_MAX_CONNS, value: {{ .Values.server.database.maxConns | quote }}}
+            - {name: CFGCANARY_S3_ENDPOINT, value: {{ .Values.server.objectStore.endpoint | quote }}}
+            - {name: CFGCANARY_S3_PUBLIC_ENDPOINT, value: {{ .Values.server.objectStore.publicEndpoint | quote }}}
+            - {name: CFGCANARY_S3_BUCKET, value: {{ .Values.server.objectStore.bucket | quote }}}
+            - {name: CFGCANARY_S3_REGION, value: {{ .Values.server.objectStore.region | quote }}}
+            - {name: CFGCANARY_S3_TLS, value: {{ .Values.server.objectStore.tls | quote }}}
+            - {name: CFGCANARY_S3_ACCESS_KEY_FILE, value: /secrets/s3/access-key}
+            - {name: CFGCANARY_S3_SECRET_KEY_FILE, value: /secrets/s3/secret-key}
+            - {name: CFGCANARY_TLS_CERT, value: /secrets/tls/tls.crt}
+            - {name: CFGCANARY_TLS_KEY, value: /secrets/tls/tls.key}
+            - {name: CFGCANARY_TLS_CA, value: /secrets/tls/ca.crt}
+            - {name: CFGCANARY_ARTIFACT_KEY, value: /secrets/signing/artifact.key}
+            - {name: CFGCANARY_DELIVERY_KEY, value: /secrets/signing/delivery.key}
+            - {name: CFGCANARY_RBAC, value: /secrets/rbac/rbac.yaml}
+            - {name: CFGCANARY_PROMETHEUS_URL, value: {{ .Values.server.prometheusUrl | quote }}}
+            - {name: CFGCANARY_MAX_PAYLOAD_BYTES, value: {{ .Values.server.maxPayloadBytes | quote }}}
+            - {name: CFGCANARY_ADMISSION_RATE, value: {{ .Values.server.admission.rate | quote }}}
+            - {name: CFGCANARY_ADMISSION_BURST, value: {{ .Values.server.admission.burst | quote }}}
+            - {name: CFGCANARY_MEMBERSHIP_WINDOW, value: {{ .Values.server.membershipWindow | quote }}}
+            {{- with .Values.server.extraEnv }}{{ toYaml . | nindent 12 }}{{ end }}
+          ports:
+            - {name: grpc, containerPort: 8443}
+            - {name: rest, containerPort: 8444}
+            - {name: metrics, containerPort: 9464}
+          readinessProbe:
+            httpGet: {path: /readyz, port: metrics}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /healthz, port: metrics}
+            periodSeconds: 10
+            failureThreshold: 6
+          startupProbe:
+            httpGet: {path: /healthz, port: metrics}
+            periodSeconds: 2
+            failureThreshold: 60
+          resources: {{- toYaml .Values.server.resources | nindent 12 }}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          volumeMounts:
+            - {name: tls, mountPath: /secrets/tls, readOnly: true}
+            - {name: signing, mountPath: /secrets/signing, readOnly: true}
+            - {name: rbac, mountPath: /secrets/rbac, readOnly: true}
+            - {name: db, mountPath: /secrets/db, readOnly: true}
+            - {name: s3, mountPath: /secrets/s3, readOnly: true}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - {name: tls, secret: {secretName: {{ .Values.server.tlsSecret }}}}
+        - {name: signing, secret: {secretName: {{ .Values.server.signingKeysSecret }}}}
+        - {name: rbac, secret: {secretName: {{ .Values.server.rbacSecret }}}}
+        - {name: db, secret: {secretName: {{ .Values.server.database.urlSecret }}}}
+        - {name: s3, secret: {secretName: {{ .Values.server.objectStore.credentialsSecret }}}}
+        - {name: tmp, emptyDir: {}}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cfgcanary.fullname" . }}
+  labels: {{- include "cfgcanary.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.server.service.type }}
+  selector: {app.kubernetes.io/instance: {{ .Release.Name }}, app.kubernetes.io/component: server}
+  ports:
+    - {name: grpc, port: {{ .Values.server.service.grpcPort }}, targetPort: grpc}
+    - {name: rest, port: {{ .Values.server.service.restPort }}, targetPort: rest}
+    - {name: metrics, port: 9464, targetPort: metrics}

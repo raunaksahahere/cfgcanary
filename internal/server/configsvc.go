@@ -212,6 +212,14 @@ func (s *Server) GetDesired(ctx context.Context, req *pb.GetDesiredRequest) (*pb
 	if err != nil {
 		return nil, err
 	}
+	// File-source agents (Kubernetes ring ConfigMaps) never open a watch;
+	// reconciliation is how they register membership and reachability.
+	uctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	err = s.store.UpsertInstance(uctx, id.Environment, req.InstanceId, id.Group(), nil, "")
+	cancel()
+	if err != nil {
+		return nil, status.Error(codes.Unavailable, "control plane storage unavailable")
+	}
 	last := map[string]int64{}
 	for _, sub := range req.Subscriptions {
 		last[sub.Config] = sub.LastGeneration

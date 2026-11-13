@@ -1,0 +1,10 @@
+apiVersion: v2
+name: cfgcanary
+description: Progressive delivery for configuration - control plane and Kubernetes ConfigRelease controller
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/raunaksahahere/cfgcanary
+sources: [https://github.com/raunaksahahere/cfgcanary]
+license: Apache-2.0
+keywords: [configuration, progressive-delivery, canary, configmap, rollout]
