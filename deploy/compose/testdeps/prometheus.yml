@@ -8,3 +8,4 @@ scrape_configs:
     scrape_interval: 1s
     file_sd_configs:
       - files: ["/etc/prometheus/targets/*.json"]
+        refresh_interval: 1s

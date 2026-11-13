@@ -1355,6 +1355,10 @@
           "type": "string",
           "format": "int64",
           "description": "Minimum total events per cohort before the metric can be evaluated."
+        },
+        "guardOnly": {
+          "type": "boolean",
+          "description": "A guard metric can fail a release (harm test or hard_max) but is not\nrequired to show non-inferiority. Use it for rare events such as\nrestarts, where small cohorts cannot provide evidence of safety. At\nleast one metric must not be a guard."
         }
       }
     },

@@ -36,7 +36,9 @@ services:
       - --storage.tsdb.path=/prometheus
       - --web.enable-remote-write-receiver
       - --web.enable-lifecycle
-    volumes: ["./testdeps/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    volumes:
+      - ./testdeps/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./testdeps/targets:/etc/prometheus/targets:ro
     ports: ["127.0.0.1:59090:9090"]
     extra_hosts: ["host.docker.internal:host-gateway"]
     healthcheck:

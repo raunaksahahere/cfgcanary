@@ -58,7 +58,8 @@ type TargetRow struct {
 	Updated      time.Time
 }
 
-func (t *TargetRow) proto() *pb.Target {
+// ProtoTarget converts to the API type.
+func (t *TargetRow) ProtoTarget() *pb.Target {
 	return &pb.Target{Config: t.Config, Environment: t.Env, Generation: t.T.Generation, BaselineVersion: t.T.Baseline,
 		CandidateVersion: t.T.Candidate, ActiveRing: t.T.ActiveRing, ReleaseId: t.ReleaseID,
 		PreviousGoodVersion: t.T.PreviousGood, Frozen: t.T.Frozen, FrozenReason: t.FrozenReason, Updated: ts(t.Updated)}
@@ -98,7 +99,7 @@ func (s *Store) GetTarget(ctx context.Context, config, env string) (*pb.Target, 
 	if err != nil {
 		return nil, err
 	}
-	return t.proto(), nil
+	return t.ProtoTarget(), nil
 }
 
 // TargetRow returns a target row.
@@ -773,7 +774,7 @@ func (s *Store) Unfreeze(ctx context.Context, config, env, reason, actor string)
 				return err
 			}
 		}
-		out = tgt.proto()
+		out = tgt.ProtoTarget()
 		return nil
 	})
 	return out, err

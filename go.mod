@@ -17,9 +17,11 @@ require (
 	github.com/prometheus/client_golang v1.25.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/tetratelabs/wazero v1.12.0
+	gonum.org/v1/gonum v0.17.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20261026165753-2ffab32bce7e
 	google.golang.org/grpc v1.85.0
 	google.golang.org/protobuf v1.36.12
+	sigs.k8s.io/yaml v1.6.0
 )
 
 require (
@@ -49,6 +51,7 @@ require (
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/tinylib/msgp v1.6.4 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
+	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/net v0.61.0 // indirect

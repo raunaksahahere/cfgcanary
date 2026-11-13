@@ -150,6 +150,15 @@ func Normalize(config, env string, in *pb.RolloutPolicy) (*pb.RolloutPolicy, err
 			return nil, errors.New("at most 8 gate metrics")
 		}
 		names := map[string]bool{}
+		evidence := 0
+		for _, m := range g.Metrics {
+			if !m.GuardOnly {
+				evidence++
+			}
+		}
+		if evidence == 0 {
+			return nil, errors.New("gate needs at least one metric that is not guard_only (guards cannot show a canary is safe)")
+		}
 		for i, m := range g.Metrics {
 			if m.Name == "" || names[m.Name] {
 				return nil, fmt.Errorf("gate.metrics[%d]: name is empty or duplicated", i)

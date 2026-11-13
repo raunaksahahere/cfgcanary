@@ -342,6 +342,11 @@ message GateMetric {
   double hard_max = 8;
   // Minimum total events per cohort before the metric can be evaluated.
   int64 min_events = 9;
+  // A guard metric can fail a release (harm test or hard_max) but is not
+  // required to show non-inferiority. Use it for rare events such as
+  // restarts, where small cohorts cannot provide evidence of safety. At
+  // least one metric must not be a guard.
+  bool guard_only = 10;
 }
 
 enum GateMode {

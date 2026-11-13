@@ -17,6 +17,7 @@ import (
 // instance label to tell canary from control.
 type Metrics struct {
 	info       *prometheus.GaugeVec
+	published  *prometheus.GaugeVec
 	failures   *prometheus.CounterVec
 	crashLoops *prometheus.CounterVec
 	stale      *prometheus.GaugeVec
@@ -32,6 +33,9 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 		info: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "cfgcanary_sdk_config_info",
 			Help: "1 for the config version the application is serving."},
 			[]string{"cfgcanary_instance", "config", "environment", "config_version", "release", "source"}),
+		published: prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "cfgcanary_sdk_config_published_timestamp_seconds",
+			Help: "Unix time at which this instance began serving this version under this release. The gate uses it to exclude instances that switched during the evaluation window."},
+			[]string{"cfgcanary_instance", "config", "environment", "config_version", "release", "source"}),
 		failures: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "cfgcanary_sdk_validation_failures_total",
 			Help: "Payloads the application's parser rejected."}, []string{"cfgcanary_instance", "config"}),
 		crashLoops: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "cfgcanary_sdk_crash_loops_total",
@@ -44,7 +48,7 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 		last: map[string]prometheus.Labels{},
 	}
 	if reg != nil {
-		reg.MustRegister(m.info, m.failures, m.crashLoops, m.stale, m.age)
+		reg.MustRegister(m.info, m.published, m.failures, m.crashLoops, m.stale, m.age)
 	}
 	return m
 }
@@ -61,12 +65,23 @@ func (c *Client[T]) updateInfoMetric(i Info) {
 		"config_version": strconv.FormatInt(i.Version, 10), "release": i.ReleaseID, "source": i.Source}
 	key := inst + "\x00" + cfg
 	m.mu.Lock()
-	if old, ok := m.last[key]; ok && !equal(old, l) {
-		m.info.Delete(old)
+	changed := true
+	if old, ok := m.last[key]; ok {
+		if equal(old, l) {
+			changed = false
+		} else {
+			m.info.Delete(old)
+			m.published.Delete(old)
+		}
 	}
 	m.last[key] = l
 	m.mu.Unlock()
 	m.info.With(l).Set(1)
+	if changed {
+		// Same content and release under a newer generation keeps the
+		// original timestamp: the instance has served it all along.
+		m.published.With(l).Set(float64(time.Now().UnixMilli()) / 1000)
+	}
 	m.age.WithLabelValues(inst, cfg).Set(0)
 }
 
@@ -92,6 +107,7 @@ func (c *Client[T]) deleteInfoMetric() {
 	m.mu.Lock()
 	if old, ok := m.last[key]; ok {
 		m.info.Delete(old)
+		m.published.Delete(old)
 		delete(m.last, key)
 	}
 	m.mu.Unlock()

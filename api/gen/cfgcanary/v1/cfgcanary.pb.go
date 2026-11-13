@@ -1665,7 +1665,12 @@ type GateMetric struct {
 	// control. 0 disables.
 	HardMax float64 `protobuf:"fixed64,8,opt,name=hard_max,json=hardMax,proto3" json:"hard_max,omitempty"`
 	// Minimum total events per cohort before the metric can be evaluated.
-	MinEvents     int64 `protobuf:"varint,9,opt,name=min_events,json=minEvents,proto3" json:"min_events,omitempty"`
+	MinEvents int64 `protobuf:"varint,9,opt,name=min_events,json=minEvents,proto3" json:"min_events,omitempty"`
+	// A guard metric can fail a release (harm test or hard_max) but is not
+	// required to show non-inferiority. Use it for rare events such as
+	// restarts, where small cohorts cannot provide evidence of safety. At
+	// least one metric must not be a guard.
+	GuardOnly     bool `protobuf:"varint,10,opt,name=guard_only,json=guardOnly,proto3" json:"guard_only,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1761,6 +1766,13 @@ func (x *GateMetric) GetMinEvents() int64 {
 		return x.MinEvents
 	}
 	return 0
+}
+
+func (x *GateMetric) GetGuardOnly() bool {
+	if x != nil {
+		return x.GuardOnly
+	}
+	return false
 }
 
 type GatePolicy struct {
@@ -5753,7 +5765,7 @@ const file_cfgcanary_v1_cfgcanary_proto_rawDesc = "" +
 	"\x04wasm\x18\x05 \x01(\v2\x1b.cfgcanary.v1.WasmValidatorR\x04wasm\"A\n" +
 	"\x04Ring\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12%\n" +
-	"\x0ecumulative_bps\x18\x02 \x01(\x05R\rcumulativeBps\"\xe8\x02\n" +
+	"\x0ecumulative_bps\x18\x02 \x01(\x05R\rcumulativeBps\"\x87\x03\n" +
 	"\n" +
 	"GateMetric\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12,\n" +
@@ -5766,7 +5778,10 @@ const file_cfgcanary_v1_cfgcanary_proto_rawDesc = "" +
 	"\x06margin\x18\a \x01(\x01R\x06margin\x12\x19\n" +
 	"\bhard_max\x18\b \x01(\x01R\ahardMax\x12\x1d\n" +
 	"\n" +
-	"min_events\x18\t \x01(\x03R\tminEvents\x1a;\n" +
+	"min_events\x18\t \x01(\x03R\tminEvents\x12\x1d\n" +
+	"\n" +
+	"guard_only\x18\n" +
+	" \x01(\bR\tguardOnly\x1a;\n" +
 	"\rMatchersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xfa\x04\n" +

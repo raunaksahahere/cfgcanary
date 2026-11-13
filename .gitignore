@@ -16,3 +16,5 @@ coverage.*
 .DS_Store
 # bulky benchmark logs stay out of git; compact results live in bench/results
 /bench/logs/
+# Prometheus file_sd targets written by integration tests
+/deploy/compose/testdeps/targets/*.json
