@@ -331,6 +331,10 @@ func (a *Agent) Reconcile(ctx context.Context, client pb.ConfigServiceClient) er
 	for _, u := range resp.Updates {
 		a.Handle(ctx, client, u)
 	}
+	// Re-report the latest status: acknowledgements the server accepted but
+	// could not store (for example during a database outage) are repaired
+	// within one reconcile interval. Bounded: one status per config.
+	a.requeueAll()
 	return nil
 }
 

@@ -1,0 +1,78 @@
+# The demo config: per-route rate limits, feature rules and a dependency timeout
+# for a "checkout" service. Register with:
+#   cfgcanary configs register -f examples/ratelimits/spec.yaml
+# (build the WASM validator first: make wasm)
+name: ratelimits
+description: Rate limits, feature rules and dependency timeout for the checkout service
+format: json
+failure_mode: FAILURE_MODE_FAIL_STATIC
+max_staleness: 600s
+retain_versions: 20
+validation:
+  limits:
+    max_bytes: 65536            # hard ceiling before anything is parsed
+    max_depth: 16
+    max_items:
+      /features: 200            # the consumer preallocates 200 slots
+      /limits: 100
+  json_schema_file: schema.json
+  cue_file: policy.cue
+  relative:
+    max_size_ratio: 2           # block a file that suddenly doubles
+    max_items_ratio: {"/features": 2}
+    min_items_ratio: {"/features": 0.5}
+  wasm:
+    module_file: validator.wasm # the consumer's own parser, sandboxed
+    timeout: 2s
+    memory_limit_mib: 32
+environments:
+  prod:
+    rings:
+      - {name: canary, cumulative_bps: 1500}
+      - {name: early, cumulative_bps: 4000}
+      - {name: broad, cumulative_bps: 9000}   # the last 10% is a holdout (control for the final ring)
+    min_instances: 3
+    acceptance_threshold: 0.9
+    min_reachable_fraction: 0.8
+    rollout_timeout: 120s
+    rollback_timeout: 60s
+    reachable_window: 30s
+    promotion: PROMOTION_AUTO
+    max_sdk_rejections: 0
+    max_crash_loops: 0
+    gate:
+      mode: GATE_MODE_PROMETHEUS
+      min_bake: 20s
+      look_interval: 10s
+      looks: 6
+      alpha_harm: 0.01
+      alpha_noninferiority: 0.05
+      min_instances: 3
+      max_sample_age: 30s
+      eval_timeout: 10s
+      on_fail: ON_FAIL_ROLLBACK
+      max_control_proportion: 0.2
+      metrics:
+        - name: errors
+          kind: METRIC_KIND_RATIO
+          metric: demo_requests_total
+          bad_metric: demo_request_errors_total
+          margin: 0.02
+          hard_max: 0.5
+          min_events: 500
+        - name: latency_over_100ms
+          kind: METRIC_KIND_HISTOGRAM_OVER
+          metric: demo_request_duration_seconds
+          le: "0.1"
+          margin: 0.05
+          min_events: 500
+        - name: restarts
+          kind: METRIC_KIND_INSTANCE_EVENT
+          metric: demo_restarts_total
+          margin: 0.5
+          guard_only: true
+        - name: sdk_rejections
+          kind: METRIC_KIND_INSTANCE_EVENT
+          metric: cfgcanary_sdk_validation_failures_total
+          margin: 0.5
+          guard_only: true

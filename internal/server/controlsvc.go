@@ -332,7 +332,12 @@ func (s *Server) DiffVersions(ctx context.Context, req *pb.DiffVersionsRequest) 
 // CreateRelease plans and (unless dry_run) creates a release. A dry run
 // writes nothing and contacts no agent.
 func (s *Server) CreateRelease(ctx context.Context, req *pb.CreateReleaseRequest) (*pb.CreateReleaseResponse, error) {
-	id, err := s.authorize(ctx, auth.PermSubmit, "release.create", req.Config, req.Environment)
+	// A dry run reads only, so viewers may plan.
+	perm, action := auth.PermSubmit, "release.create"
+	if req.DryRun {
+		perm, action = auth.PermRead, "release.plan"
+	}
+	id, err := s.authorize(ctx, perm, action, req.Config, req.Environment)
 	if err != nil {
 		return nil, err
 	}

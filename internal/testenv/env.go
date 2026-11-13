@@ -60,6 +60,11 @@ func WithServer(f func(*server.Config)) Option { return func(o *app.ServerOption
 // Start boots a control plane with a fresh database and bucket.
 func Start(t testing.TB, opts ...Option) *Env {
 	t.Helper()
+	return start(t, nil, opts...)
+}
+
+func start(t testing.TB, adjust func(*Env), opts ...Option) *Env {
+	t.Helper()
 	testutil.RequireIntegration(t)
 	e := &Env{T: t, Dir: t.TempDir()}
 	e.PKI = filepath.Join(e.Dir, "pki")
@@ -85,6 +90,9 @@ func Start(t testing.TB, opts ...Option) *Env {
 	for _, o := range opts {
 		o(&e.Opts)
 	}
+	if adjust != nil {
+		adjust(e)
+	}
 	e.StartServer()
 	t.Cleanup(e.StopServer)
 	return e
@@ -105,6 +113,9 @@ func (e *Env) StartServer() {
 	addr := e.grpcAddr
 	if addr == "" {
 		addr = "127.0.0.1:0"
+		if e.Opts.GRPCListen == "bridge" {
+			addr = dockerBridgeIP() + ":0"
+		}
 	}
 	var gl net.Listener
 	var err error
