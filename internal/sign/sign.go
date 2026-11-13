@@ -80,6 +80,10 @@ func NewSigner(p Purpose, key ed25519.PrivateKey) *Signer {
 	return &Signer{purpose: p, key: key, id: KeyID(key.Public().(ed25519.PublicKey))}
 }
 
+// Sign2 signs an artifact statement; it has the shape store.InsertVersion
+// expects.
+func (s *Signer) Sign2(a Artifact) (Signed, error) { return s.Sign(a) }
+
 // KeyID returns the signer's key ID.
 func (s *Signer) KeyID() string { return s.id }
 

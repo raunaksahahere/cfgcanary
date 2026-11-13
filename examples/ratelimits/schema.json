@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "service", "timeout_ms", "features", "limits"],
+  "properties": {
+    "schema_version": {"type": "integer", "minimum": 1},
+    "service": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "timeout_ms": {"type": "integer", "minimum": 1, "maximum": 60000},
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "enabled", "rollout_percent"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1, "pattern": "\\S"},
+          "enabled": {"type": "boolean"},
+          "rollout_percent": {"type": "integer", "minimum": 0, "maximum": 100},
+          "rule": {"type": "string"}
+        }
+      }
+    },
+    "limits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["route", "rps", "burst"],
+        "properties": {
+          "route": {"type": "string", "minLength": 1},
+          "rps": {"type": "integer", "minimum": 1},
+          "burst": {"type": "integer", "minimum": 1}
+        }
+      }
+    }
+  }
+}

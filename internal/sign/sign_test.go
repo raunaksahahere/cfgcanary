@@ -39,10 +39,22 @@ func TestVerifyUpdate(t *testing.T) {
 		{"tampered payload", Signed{append([]byte{}, append(a.Payload, ' ')...), a.Signature, a.KeyID}, d, Scope{"limits", "prod", 0}, ErrBadSignature},
 		{"unknown key", Signed{a.Payload, a.Signature, "0000000000000000"}, d, Scope{"limits", "prod", 0}, ErrUnknownKey},
 		// A delivery key must not be able to vouch for content, and vice versa.
-		{"purpose confusion", func() Signed { s, _ := NewSigner(PurposeArtifact, ds.key).Sign(Artifact{Config: "limits", Version: 3, SHA256: sha, Environments: []string{"prod"}}); return s }(), d, Scope{"limits", "prod", 0}, ErrWrongPurpose},
-		{"version mismatch", a, func() Signed { s, _ := ds.Sign(Delivery{Config: "limits", Environment: "prod", Generation: 8, Version: 4, SHA256: sha, RingHi: 1}); return s }(), Scope{"limits", "prod", 0}, ErrScope},
-		{"digest mismatch", a, func() Signed { s, _ := ds.Sign(Delivery{Config: "limits", Environment: "prod", Generation: 8, Version: 3, SHA256: strings.Repeat("cd", 32), RingHi: 1}); return s }(), Scope{"limits", "prod", 0}, ErrScope},
-		{"env not allowed by artifact", func() Signed { s, _ := as.Sign(Artifact{Config: "limits", Version: 3, SHA256: sha, Environments: []string{"staging"}}); return s }(), d, Scope{"limits", "prod", 0}, ErrScope},
+		{"purpose confusion", func() Signed {
+			s, _ := NewSigner(PurposeArtifact, ds.key).Sign(Artifact{Config: "limits", Version: 3, SHA256: sha, Environments: []string{"prod"}})
+			return s
+		}(), d, Scope{"limits", "prod", 0}, ErrWrongPurpose},
+		{"version mismatch", a, func() Signed {
+			s, _ := ds.Sign(Delivery{Config: "limits", Environment: "prod", Generation: 8, Version: 4, SHA256: sha, RingHi: 1})
+			return s
+		}(), Scope{"limits", "prod", 0}, ErrScope},
+		{"digest mismatch", a, func() Signed {
+			s, _ := ds.Sign(Delivery{Config: "limits", Environment: "prod", Generation: 8, Version: 3, SHA256: strings.Repeat("cd", 32), RingHi: 1})
+			return s
+		}(), Scope{"limits", "prod", 0}, ErrScope},
+		{"env not allowed by artifact", func() Signed {
+			s, _ := as.Sign(Artifact{Config: "limits", Version: 3, SHA256: sha, Environments: []string{"staging"}})
+			return s
+		}(), d, Scope{"limits", "prod", 0}, ErrScope},
 	}
 	for _, c := range cases {
 		if _, _, err := b.VerifyUpdate(c.a, c.d, c.sc); !errors.Is(err, c.want) {

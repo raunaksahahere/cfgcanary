@@ -1,0 +1,10 @@
+# Integration tests push samples with the remote-write receiver or expose
+# them on the host for scraping; nothing is scraped by default.
+global:
+  scrape_interval: 1s
+  evaluation_interval: 1s
+scrape_configs:
+  - job_name: tests
+    scrape_interval: 1s
+    file_sd_configs:
+      - files: ["/etc/prometheus/targets/*.json"]
