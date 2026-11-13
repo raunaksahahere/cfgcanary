@@ -1,0 +1,112 @@
+{
+  "definitions": {
+    "affected": "instances that served it while producing errors (the harmful config makes requests time out)",
+    "agent_applied": "instances whose agent verified and durably applied it",
+    "detect": "release created until rollback started (cfgcanary: gate FAIL; naive: no detector in the delivery path)",
+    "eligible": "instances in the fleet when the release was created",
+    "rollback": "rollback started until every reachable exposed instance confirmed the fallback (server view)",
+    "sdk_accepted": "instances whose application (SDK) served it",
+    "targeted": "instances whose ring was exposed to the harmful version",
+    "workload": "50 simulated instances, 40 requests/s each, dependency latency lognormal (median 40 ms, sigma 0.5); harmful change sets timeout_ms 250 -\u003e 20; Prometheus scrapes every 1 s; gate: errors and latency, min bake 10 s, look every 5 s, 6 looks"
+  },
+  "environment": {
+    "host": "local workstation (AMD Ryzen 5 5600H with Radeon Graphics)",
+    "cpu": "AMD Ryzen 5 5600H with Radeon Graphics",
+    "cpus": 12,
+    "memory_mb": 7262,
+    "os": "linux/amd64",
+    "go": "go1.27.4",
+    "commit": "81f3035200dc",
+    "dirty": false,
+    "postgres": "postgres:18.6 (fsync=off, tmpfs; see deploy/compose/test-deps.yaml)",
+    "s3": "pgsty/minio:RELEASE.2026-08-04T00-00-00Z",
+    "timestamp": "2026-11-13T13:53:12Z",
+    "command": "CFGCANARY_BENCH=1 go test ./bench -run TestBlastRadius -timeout 30m"
+  },
+  "results": [
+    {
+      "system": "cfgcanary (gated rings 15/40/90% + holdout)",
+      "measured": true,
+      "fleet": 50,
+      "eligible": 50,
+      "targeted": 8,
+      "agent_applied": 8,
+      "sdk_accepted": 8,
+      "affected": 8,
+      "time_to_detect_seconds": 10.236668,
+      "time_to_rollback_seconds": 0.080904,
+      "unreachable_at_rollback": 0,
+      "notes": "verdict: errors: canary is worse than control beyond the tolerated 0.0200: 0.9074 vs 0.0001 (z=130.38 \u003e 4.94)"
+    },
+    {
+      "system": "cfgcanary (gated rings 15/40/90% + holdout)",
+      "measured": true,
+      "fleet": 50,
+      "eligible": 50,
+      "targeted": 8,
+      "agent_applied": 8,
+      "sdk_accepted": 8,
+      "affected": 8,
+      "time_to_detect_seconds": 10.25409,
+      "time_to_rollback_seconds": 0.088279,
+      "unreachable_at_rollback": 0,
+      "notes": "verdict: errors: canary is worse than control beyond the tolerated 0.0200: 0.4581 vs 0.0001 (z=64.96 \u003e 4.94)"
+    },
+    {
+      "system": "cfgcanary (gated rings 15/40/90% + holdout)",
+      "measured": true,
+      "fleet": 50,
+      "eligible": 50,
+      "targeted": 8,
+      "agent_applied": 8,
+      "sdk_accepted": 8,
+      "affected": 8,
+      "time_to_detect_seconds": 10.256252,
+      "time_to_rollback_seconds": 0.090687,
+      "unreachable_at_rollback": 0,
+      "notes": "verdict: errors: canary is worse than control beyond the tolerated 0.0200: 0.3074 vs 0.0000 (z=53.89 \u003e 4.94)"
+    },
+    {
+      "system": "naive push-to-all (isolated benchmark mode of the same system)",
+      "measured": true,
+      "fleet": 50,
+      "eligible": 50,
+      "targeted": 50,
+      "agent_applied": 50,
+      "sdk_accepted": 50,
+      "affected": 50,
+      "time_to_detect_seconds": -1,
+      "time_to_rollback_seconds": -1,
+      "unreachable_at_rollback": 0,
+      "notes": "nothing in the delivery path detects runtime harm; exposure reached the whole fleet in 200ms, and the config stays until a human notices"
+    },
+    {
+      "system": "rolling restart on ConfigMap change (Reloader-style MODEL, not the real product)",
+      "measured": false,
+      "fleet": 50,
+      "eligible": 50,
+      "targeted": 50,
+      "agent_applied": 50,
+      "sdk_accepted": 50,
+      "affected": 50,
+      "time_to_detect_seconds": -1,
+      "time_to_rollback_seconds": -1,
+      "unreachable_at_rollback": 0,
+      "notes": "runtime-harmful but startable config: passes readiness, every batch restarts onto it in ~4 x 15 s = 60 s; nothing compares error rates"
+    },
+    {
+      "system": "rolling restart on ConfigMap change (Reloader-style MODEL, not the real product)",
+      "measured": false,
+      "fleet": 50,
+      "eligible": 50,
+      "targeted": 13,
+      "agent_applied": 13,
+      "sdk_accepted": 13,
+      "affected": 13,
+      "time_to_detect_seconds": -1,
+      "time_to_rollback_seconds": -1,
+      "unreachable_at_rollback": 0,
+      "notes": "parser-crashing config: first batch (25%) crash-loops, rollout stalls; no content validation, no automatic rollback; pods keep crash-looping (no last-known-good)"
+    }
+  ]
+}

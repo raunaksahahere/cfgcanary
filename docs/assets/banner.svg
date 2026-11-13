@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 340" width="1280" height="340" role="img" aria-labelledby="t d">
+  <title id="t">cfgcanary</title>
+  <desc id="d">cfgcanary delivers configuration progressively: it validates a change, exposes it to a small canary ring, compares that ring with the rest of the fleet, then promotes it ring by ring or rolls it back.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1222"/>
+      <stop offset="0.55" stop-color="#141a3a"/>
+      <stop offset="1" stop-color="#1d1146"/>
+    </linearGradient>
+    <linearGradient id="word" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#a5b4fc"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#f59e0b" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity="0.045"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="340" rx="24" fill="url(#bg)"/>
+  <rect width="1280" height="340" rx="24" fill="url(#grid)"/>
+
+  <!-- wordmark -->
+  <g font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+    <text x="72" y="130" font-size="96" font-weight="800" letter-spacing="-3" fill="url(#word)">cfgcanary</text>
+    <text x="76" y="190" font-size="26" fill="#cbd5e1">Progressive delivery for configuration</text>
+    <text x="76" y="224" font-size="19" fill="#94a3b8">Validate, canary, promote and roll back config like code</text>
+
+    <!-- pipeline pills -->
+    <g font-size="15" font-weight="700" letter-spacing="1">
+      <rect x="76" y="254" width="118" height="34" rx="17" fill="#38bdf8" fill-opacity="0.14" stroke="#38bdf8"/>
+      <text x="135" y="276" text-anchor="middle" fill="#7dd3fc">VALIDATE</text>
+      <rect x="206" y="254" width="104" height="34" rx="17" fill="#f59e0b" fill-opacity="0.16" stroke="#f59e0b"/>
+      <text x="258" y="276" text-anchor="middle" fill="#fbbf24">CANARY</text>
+      <rect x="322" y="254" width="118" height="34" rx="17" fill="#22c55e" fill-opacity="0.16" stroke="#22c55e"/>
+      <text x="381" y="276" text-anchor="middle" fill="#4ade80">PROMOTE</text>
+      <rect x="452" y="254" width="138" height="34" rx="17" fill="#ef4444" fill-opacity="0.16" stroke="#ef4444"/>
+      <text x="521" y="276" text-anchor="middle" fill="#f87171">ROLL BACK</text>
+    </g>
+  </g>
+
+  <!-- rollout rings: canary (amber), early (indigo), broad (slate) -->
+  <g transform="translate(1010 170)">
+    <circle r="62" fill="url(#glow)"/>
+    <circle r="126" fill="none" stroke="#475569" stroke-width="2" stroke-dasharray="4 6"/>
+    <circle r="86" fill="none" stroke="#6366f1" stroke-width="2" stroke-opacity="0.8"/>
+    <circle r="44" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+    <g fill="#fbbf24">
+      <circle cx="0" cy="-44" r="7"/>
+      <circle cx="38" cy="22" r="7"/>
+      <circle cx="-38" cy="22" r="7"/>
+    </g>
+    <g fill="#818cf8">
+      <circle cx="0" cy="86" r="6"/>
+      <circle cx="74" cy="-43" r="6"/>
+      <circle cx="-74" cy="-43" r="6"/>
+      <circle cx="61" cy="61" r="6"/>
+      <circle cx="-61" cy="61" r="6"/>
+      <circle cx="-86" cy="0" r="6"/>
+    </g>
+    <g fill="#64748b">
+      <circle cx="0" cy="-126" r="5"/>
+      <circle cx="89" cy="-89" r="5"/>
+      <circle cx="126" cy="0" r="5"/>
+      <circle cx="89" cy="89" r="5"/>
+      <circle cx="0" cy="126" r="5"/>
+      <circle cx="-89" cy="89" r="5"/>
+      <circle cx="-126" cy="0" r="5"/>
+      <circle cx="-89" cy="-89" r="5"/>
+      <circle cx="48" cy="-117" r="5"/>
+      <circle cx="-117" cy="48" r="5"/>
+    </g>
+    <circle r="12" fill="#f8fafc"/>
+    <path d="M-5 0l3.5 3.5L6 -4" fill="none" stroke="#0b1222" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" fill="#cbd5e1">
+    <circle cx="1172" cy="70" r="6" fill="#fbbf24"/><text x="1184" y="75">canary</text>
+    <circle cx="1172" cy="96" r="6" fill="#818cf8"/><text x="1184" y="101">early</text>
+    <circle cx="1172" cy="122" r="6" fill="#64748b"/><text x="1184" y="127">broad</text>
+  </g>
+</svg>

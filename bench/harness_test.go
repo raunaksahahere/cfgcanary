@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 
 	pb "github.com/raunaksahahere/cfgcanary/api/gen/cfgcanary/v1"
 	"github.com/raunaksahahere/cfgcanary/internal/client"
@@ -155,7 +156,7 @@ func (h *harness) metrics() map[string]float64 {
 		return out
 	}
 	defer r.Body.Close()
-	var p expfmt.TextParser
+	p := expfmt.NewTextParser(model.UTF8Validation)
 	fams, err := p.TextToMetricFamilies(bufio.NewReader(r.Body))
 	if err != nil {
 		return out
