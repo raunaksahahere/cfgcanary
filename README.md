@@ -4,9 +4,10 @@
 
 <p align="center">
   <a href="https://github.com/raunaksahahere/cfgcanary/actions/workflows/ci.yml"><img src="https://github.com/raunaksahahere/cfgcanary/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://github.com/raunaksahahere/cfgcanary/releases/tag/v0.1.0"><img src="https://img.shields.io/badge/release-v0.1.0-7c3aed" alt="Release v0.1.0"></a>
   <img src="https://img.shields.io/badge/Go-1.27-00ADD8?logo=go&logoColor=white" alt="Go 1.27">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
-  <img src="https://img.shields.io/badge/status-alpha%20(v0.1.0)-orange" alt="Status: alpha, v0.1.0">
+  <img src="https://img.shields.io/badge/status-alpha-orange" alt="Status: alpha">
   <img src="https://img.shields.io/badge/Kubernetes-ConfigRelease%20CRD-326CE5?logo=kubernetes&logoColor=white" alt="Kubernetes ConfigRelease CRD">
 </p>
 
