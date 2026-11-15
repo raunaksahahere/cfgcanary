@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -281,5 +282,32 @@ func TestSnapshotImmutability(t *testing.T) {
 	}
 	if _, ok := mutable(reflectType[flat]()); ok {
 		t.Fatal("flat struct reported mutable")
+	}
+}
+
+// A status the SDK could not write (here: a disk fault) is retried, so a
+// rejection still reaches the agent.
+func TestStatusWriteRetried(t *testing.T) {
+	h := newHarness(t)
+	h.push(1, 1, cfgJSON("checkout", 100))
+	c := h.open(h.opts())
+	var fail atomic.Bool
+	fail.Store(true)
+	cache.SetFaultInjector(func(step, path string) error {
+		if fail.Load() && step == "rename" && strings.HasSuffix(path, "sdk-status.json") {
+			return errors.New("injected")
+		}
+		return nil
+	})
+	defer cache.SetFaultInjector(nil)
+	h.push(2, 2, `{"schema_version":2,"service":"checkout","timeout_ms":100,"features":[],"limits":[]}`)
+	time.Sleep(200 * time.Millisecond)
+	if s := status(t, h.root); s.State == "REJECTED" {
+		t.Fatal("status written despite the injected fault")
+	}
+	fail.Store(false)
+	tu.Eventually(t, 15*time.Second, "REJECTED status after the disk recovers", func() bool { return status(t, h.root).State == "REJECTED" })
+	if c.Info().Version != 1 {
+		t.Fatal("LKG not kept")
 	}
 }

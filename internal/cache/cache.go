@@ -31,6 +31,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/raunaksahahere/cfgcanary/internal/sign"
@@ -99,12 +100,20 @@ func (d *Dir) Config() string { return d.config }
 
 func (d *Dir) objectPath(sha string) string { return filepath.Join(d.path, "objects", sha) }
 
+// staleTemp is how old a temp file must be before it is treated as left over
+// from a crash. The agent and the SDK both open this directory; a younger temp
+// file may belong to a write the other process is in the middle of.
+const staleTemp = time.Minute
+
 // cleanTemps removes temp files left by a crash.
 func (d *Dir) cleanTemps() {
 	for _, dir := range []string{d.path, filepath.Join(d.path, "objects")} {
 		ents, _ := os.ReadDir(dir)
 		for _, e := range ents {
-			if strings.HasPrefix(e.Name(), ".tmp-") {
+			if !strings.HasPrefix(e.Name(), ".tmp-") {
+				continue
+			}
+			if info, err := e.Info(); err == nil && time.Since(info.ModTime()) > staleTemp {
 				_ = os.Remove(filepath.Join(dir, e.Name()))
 			}
 		}
@@ -112,11 +121,11 @@ func (d *Dir) cleanTemps() {
 }
 
 // fsFaults lets tests inject disk errors at named steps.
-var fsFaults func(step, path string) error
+var fsFaults atomic.Pointer[func(step, path string) error]
 
 func fault(step, path string) error {
-	if fsFaults != nil {
-		return fsFaults(step, path)
+	if f := fsFaults.Load(); f != nil {
+		return (*f)(step, path)
 	}
 	return nil
 }
@@ -460,8 +469,14 @@ func ReadHeartbeat(root string) int64 {
 
 // SetFaultInjector installs a hook that can fail named filesystem steps
 // ("create", "write", "fsync", "rename") for a path. Tests only; pass nil to
-// remove it. Not safe to change while writes are in progress.
-func SetFaultInjector(f func(step, path string) error) { fsFaults = f }
+// remove it. Safe to call while writes are in progress.
+func SetFaultInjector(f func(step, path string) error) {
+	if f == nil {
+		fsFaults.Store(nil)
+		return
+	}
+	fsFaults.Store(&f)
+}
 
 // Digest returns the hex SHA-256 of b.
 func Digest(b []byte) string { return digest(b) }

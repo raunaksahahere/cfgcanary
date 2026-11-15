@@ -144,6 +144,7 @@ type Client[T any] struct {
 	trialSince  time.Time
 	lastBeat    int64
 	lastContact time.Time
+	unwritten   *cache.SDKStatus // newest status not yet on disk
 	closeOnce   sync.Once
 }
 
@@ -372,10 +373,19 @@ func (c *Client[T]) writeStatus(s cache.SDKStatus) {
 	}
 	c.seq++
 	s.Seq = c.seq
-	if err := c.dir.WriteSDKStatus(s); err != nil {
-		c.log.Warn("could not write status for the agent", "err", err)
+	c.flushStatus(&s)
+}
+
+// flushStatus writes a status for the agent. A status that cannot be written
+// (disk error, or another process cleaning the directory) is kept and retried
+// on every poll, so a rejection or crash loop is never silently lost.
+func (c *Client[T]) flushStatus(s *cache.SDKStatus) {
+	if err := c.dir.WriteSDKStatus(*s); err != nil {
+		c.log.Warn("could not write status for the agent; will retry", "err", err)
+		c.unwritten = s
 		return
 	}
+	c.unwritten = nil
 	if c.opt.OnStatus != nil {
 		c.opt.OnStatus()
 	}
@@ -400,6 +410,9 @@ func (c *Client[T]) loop(ctx context.Context) {
 func (c *Client[T]) poll() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.unwritten != nil {
+		c.flushStatus(c.unwritten)
+	}
 	if n := cache.ReadHeartbeat(c.opt.Dir); n != c.lastBeat {
 		c.lastBeat, c.lastContact = n, time.Now()
 	}
